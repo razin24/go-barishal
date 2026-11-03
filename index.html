@@ -7,21 +7,24 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; background-color: #F4F0FB; color: #1B1330; text-align: center; padding: 20px; }
-        .btn { background-color: #3F0F8F; color: white; padding: 15px 20px; border: none; border-radius: 12px; font-size: 18px; width: 100%; margin-bottom: 15px; }
+        .btn { background-color: #3F0F8F; color: white; padding: 15px 20px; border: none; border-radius: 12px; font-size: 18px; width: 100%; margin-bottom: 15px; cursor: pointer; }
         .card { background-color: #FFFFFF; padding: 20px; border-radius: 12px; margin-top: 20px; }
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <h2>Go Barishal</h2>
 
-    <div id="login-section" class="card">
+    <!-- লগইন সেকশন -->
+    <div id="login-section" class="card hidden">
         <p>অ্যাপ ব্যবহার করতে Google দিয়ে লগইন করুন</p>
         <button class="btn" onclick="loginWithGoogle()">Google লগইন</button>
     </div>
 
-    <div id="profile-section" class="card" style="display: none;">
+    <!-- প্রোফাইল তৈরি সেকশন -->
+    <div id="profile-section" class="card hidden">
         <h3>আপনার তথ্য দিন</h3>
         <input type="text" id="full_name" placeholder="আপনার নাম">
         <input type="text" id="phone" placeholder="ফোন নম্বর">
@@ -33,20 +36,34 @@
         <button class="btn" onclick="saveProfile()">সেভ করুন</button>
     </div>
 
+    <!-- যাত্রীর ড্যাশবোর্ড -->
+    <div id="passenger-dashboard" class="card hidden">
+        <h3>কোথায় যাবেন?</h3>
+        <input type="text" id="pickup" placeholder="আপনার বর্তমান অবস্থান (যেমন: নথুল্লাবাদ)">
+        <input type="text" id="dropoff" placeholder="গন্তব্যস্থল (যেমন: রূপাতলী)">
+        <input type="number" id="price" placeholder="আপনার ভাড়া প্রস্তাব করুন (টাকা)">
+        <button class="btn" onclick="requestRide()">রাইড খুঁজুন</button>
+    </div>
+
+    <!-- চালকের ড্যাশবোর্ড -->
+    <div id="driver-dashboard" class="card hidden">
+        <h3>নতুন রাইড রিকোয়েস্ট</h3>
+        <div id="requests-list">
+            <p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>
+        </div>
+    </div>
+
    <script>
-        // এখানে আপনার Supabase URL ও Anon Key বসান
         const supabaseUrl = 'https://bgtauxcgptxddbtbaxmx.supabase.co';
         const supabaseKey = 'sb_publishable_IZXzzBSjZzbFrqxnhhus9g_9myHECV8';
-        
-        // নাম পরিবর্তন করে supabaseClient দেওয়া হয়েছে
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-      async function loginWithGoogle() {
-            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+        let currentUser = null;
+
+        async function loginWithGoogle() {
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
-                options: {
-                    redirectTo: 'https://razin24.github.io/go-barishal/'
-                }
+                options: { redirectTo: 'https://razin24.github.io/go-barishal/' }
             });
             if (error) alert("লগইনে সমস্যা হয়েছে!");
         }
@@ -54,13 +71,25 @@
         async function checkUser() {
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (user) {
-                document.getElementById('login-section').style.display = 'none';
-                document.getElementById('profile-section').style.display = 'block';
+                currentUser = user;
+                // ডাটাবেস থেকে ইউজারের প্রোফাইল চেক করা হচ্ছে
+                const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+                
+                if (profile) {
+                    if(profile.role === 'passenger') {
+                        showSection('passenger-dashboard');
+                    } else {
+                        showSection('driver-dashboard');
+                    }
+                } else {
+                    showSection('profile-section');
+                }
+            } else {
+                showSection('login-section');
             }
         }
 
-       async function saveProfile() {
-            const { data: { user } } = await supabaseClient.auth.getUser();
+        async function saveProfile() {
             const fullName = document.getElementById('full_name').value;
             const phone = document.getElementById('phone').value;
             const role = document.getElementById('role').value;
@@ -72,9 +101,9 @@
             }
 
             const { error } = await supabaseClient.from('profiles').insert([{
-                id: user.id,
+                id: currentUser.id,
                 full_name: fullName,
-                email: user.email,
+                email: currentUser.email,
                 phone: phone,
                 role: role,
                 accepted_terms_at: new Date().toISOString()
@@ -84,7 +113,20 @@
                 alert("ডাটাবেস এরর: " + error.message);
             } else {
                 alert("প্রোফাইল তৈরি হয়েছে!");
+                checkUser(); 
             }
+        }
+
+        async function requestRide() {
+            alert("রাইড খোঁজা হচ্ছে... (এর পরের ধাপে আমরা এই ডাটাগুলো ডাটাবেসে পাঠাবো)");
+        }
+
+        function showSection(sectionId) {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('profile-section').classList.add('hidden');
+            document.getElementById('passenger-dashboard').classList.add('hidden');
+            document.getElementById('driver-dashboard').classList.add('hidden');
+            document.getElementById(sectionId).classList.remove('hidden');
         }
 
         checkUser();
