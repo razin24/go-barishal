@@ -5,17 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Go Barishal</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #F4F0FB; color: #1B1330; text-align: center; padding: 20px; }
+        body { font-family: sans-serif; background-color: #F4F0FB; color: #1B1330; text-align: center; padding: 20px; margin: 0; }
         .btn { background-color: #3F0F8F; color: white; padding: 15px 20px; border: none; border-radius: 12px; font-size: 18px; width: 100%; margin-bottom: 15px; cursor: pointer; }
-        .card { background-color: #FFFFFF; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .card { background-color: #FFFFFF; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; }
         .hidden { display: none; }
+        #map { height: 250px; width: 100%; margin-bottom: 15px; border-radius: 8px; z-index: 1; }
+        .profile-bar { background-color: #e3e0f3; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: left; }
     </style>
 </head>
 <body>
 
     <h2>Go Barishal</h2>
+
+    <div id="user-info-bar" class="profile-bar hidden">
+        <strong>Nam:</strong> <span id="display-name"></span><br>
+        <strong>Phone:</strong> <span id="display-phone"></span><br>
+        <strong>Role:</strong> <span id="display-role"></span>
+    </div>
 
     <div id="login-section" class="card hidden">
         <p>App bebohar korte Google diye login korun</p>
@@ -36,6 +46,9 @@
 
     <div id="passenger-dashboard" class="card hidden">
         <h3>Kothay jaben?</h3>
+        
+        <div id="map"></div>
+
         <select id="pickup">
             <option value="">Kotha theke jaben?</option>
             <option value="Nathullabad">Nathullabad</option>
@@ -73,9 +86,9 @@
 
     <div id="active-ride-section" class="card hidden">
         <h3 id="active-ride-title">Choloman Ride</h3>
-        <div id="active-ride-details" style="text-align: left; padding: 10px;"></div>
-        <button id="finish-btn" class="btn hidden" style="background-color: #d32f2f;" onclick="finishRide()">Ride Shesh Korun</button>
-        <button id="refresh-btn" class="btn hidden" style="background-color: #1976d2;" onclick="checkCurrentRide()">Status Check Korun</button>
+        <div id="active-ride-details" style="text-align: left; padding: 10px; background: #f9f9f9; border-radius: 8px;"></div>
+        <button id="finish-btn" class="btn hidden" style="background-color: #d32f2f; margin-top: 15px;" onclick="finishRide()">Ride Shesh Korun</button>
+        <button id="refresh-btn" class="btn hidden" style="background-color: #1976d2; margin-top: 15px;" onclick="checkCurrentRide()">Status Check Korun</button>
     </div>
 
    <script>
@@ -86,6 +99,7 @@
         let currentUser = null;
         let currentRole = null;
         let activeRideId = null;
+        let mapInitialized = false;
 
         async function loginWithGoogle() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -103,6 +117,12 @@
                 
                 if (profile) {
                     currentRole = profile.role;
+                    
+                    document.getElementById('display-name').innerText = profile.full_name;
+                    document.getElementById('display-phone').innerText = profile.phone;
+                    document.getElementById('display-role').innerText = profile.role === 'passenger' ? 'Jatri' : 'Chalok';
+                    document.getElementById('user-info-bar').classList.remove('hidden');
+                    
                     checkCurrentRide();
                 } else {
                     showSection('profile-section');
@@ -131,6 +151,18 @@
 
             if (error) alert("Database error: " + error.message);
             else { alert("Profile toiri hoyeche!"); checkUser(); }
+        }
+
+        function initMap() {
+            if (!mapInitialized) {
+                const map = L.map('map').setView([22.7010, 90.3535], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                L.marker([22.7010, 90.3535]).addTo(map).bindPopup('Barishal City').openPopup();
+                mapInitialized = true;
+            }
         }
 
         async function requestRide() {
@@ -165,10 +197,10 @@
                 const { data } = await supabaseClient.from('rides').select('*').eq('passenger_id', currentUser.id).in('status', ['pending', 'accepted']).order('created_at', { ascending: false }).limit(1);
                 
                 if (data && data.length > 0) {
-                    const ride = data[0];
-                    showActiveRideScreen(ride);
+                    showActiveRideScreen(data[0]);
                 } else {
                     showSection('passenger-dashboard');
+                    setTimeout(initMap, 500); 
                 }
             } else if (currentRole === 'driver') {
                 const { data } = await supabaseClient.from('rides').select('*').eq('driver_id', currentUser.id).eq('status', 'accepted').order('created_at', { ascending: false }).limit(1);
@@ -215,7 +247,7 @@
                 let html = '';
                 data.forEach(ride => {
                     html += `
-                    <div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left;">
+                    <div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left; background:#fff;">
                         <p><b>Location:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p>
                         <p><b>Bahon:</b> ${ride.vehicle_type}</p>
                         <p><b>Bhara:</b> ${ride.fare} Taka</p>
