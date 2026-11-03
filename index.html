@@ -663,49 +663,29 @@
     /** --- MAP INITIALIZATION --- **/
     const barishalCenter = [22.7010, 90.3535]; // Barishal coordinate
 
-    function initMap(containerId) {
-        // Delay slightly to allow CSS transition to finish before initializing
-        setTimeout(() => {
-            const container = document.getElementById(containerId);
-            if (!container) return;
+    function initMap() {
+    if (!mapInitialized) {
+        // জিপিএস না পেলে বরিশালের ডিফল্ট লোকেশন দেখাবে
+        let lat = userLat ? userLat : 22.7010;
+        let lng = userLng ? userLng : 90.3535;
 
-            if (!maps[containerId]) {
-                // Custom Light theme map tiles (CartoDB Positron)
-                maps[containerId] = L.map(containerId, {
-                    zoomControl: false, 
-                    attributionControl: false
-                }).setView(barishalCenter, 14);
-                
-              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+        map = L.map('map').setView([lat, lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-                // Add markers based on screen
-                if(containerId === 'map-passenger') {
-                    addMarker(maps[containerId], barishalCenter, '#3F0F8F', 'fa-location-crosshairs');
-                } else if (containerId === 'map-driver') {
-                    // Driver location dot
-                    L.circleMarker(barishalCenter, {
-                        color: '#FFFFFF',
-                        fillColor: '#3F0F8F',
-                        fillOpacity: 1,
-                        radius: 8,
-                        weight: 3
-                    }).addTo(maps[containerId]);
-                } else if (containerId === 'map-active') {
-                    addMarker(maps[containerId], barishalCenter, '#3F0F8F', 'fa-circle-dot'); // Pickup
-                    addMarker(maps[containerId], [22.7150, 90.3600], '#D92D20', 'fa-location-dot'); // Drop
-                    
-                    // Fit bounds to show both
-                    const bounds = L.latLngBounds([barishalCenter, [22.7150, 90.3600]]);
-                    maps[containerId].fitBounds(bounds, { padding: [50, 50], paddingTopLeft: [20, 100], paddingBottomRight: [20, 280] });
-                }
-            } else {
-                maps[containerId].invalidateSize();
-            }
-        }, 300);
+        if(userLat && userLng){
+            L.marker([userLat, userLng]).addTo(map).bindPopup('আপনার অবস্থান').openPopup();
+        }
+        
+        mapInitialized = true;
+        loadOnlineDrivers();
     }
+    
+    // ম্যাপের ছাই রঙের বা সাইজ ভেঙে যাওয়ার সমস্যা ঠিক করতে
+    setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+}
     
     function addMarker(map, latlng, color, iconClass) {
         const customIcon = L.divIcon({
