@@ -53,7 +53,7 @@
         </div>
     </div>
 
-   <script>
+  <script>
         const supabaseUrl = 'https://bgtauxcgptxddbtbaxmx.supabase.co';
         const supabaseKey = 'sb_publishable_IZXzzBSjZzbFrqxnhhus9g_9myHECV8';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -72,7 +72,6 @@
             const { data: { user } } = await supabaseClient.auth.getUser();
             if (user) {
                 currentUser = user;
-                // ডাটাবেস থেকে ইউজারের প্রোফাইল চেক করা হচ্ছে
                 const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
                 
                 if (profile) {
@@ -80,6 +79,7 @@
                         showSection('passenger-dashboard');
                     } else {
                         showSection('driver-dashboard');
+                        fetchRequests(); // চালক হলে রিকোয়েস্ট খুঁজবে
                     }
                 } else {
                     showSection('profile-section');
@@ -95,10 +95,7 @@
             const role = document.getElementById('role').value;
             const terms = document.getElementById('terms').checked;
 
-            if (!terms) {
-                alert("শর্তাবলীতে টিক দিন!");
-                return;
-            }
+            if (!terms) { alert("শর্তাবলীতে টিক দিন!"); return; }
 
             const { error } = await supabaseClient.from('profiles').insert([{
                 id: currentUser.id,
@@ -109,16 +106,53 @@
                 accepted_terms_at: new Date().toISOString()
             }]);
 
+            if (error) alert("ডাটাবেস এরর: " + error.message);
+            else { alert("প্রোফাইল তৈরি হয়েছে!"); checkUser(); }
+        }
+
+        // যাত্রীর রাইড রিকোয়েস্ট পাঠানোর ফাংশন
+        async function requestRide() {
+            const pickup = document.getElementById('pickup').value;
+            const dropoff = document.getElementById('dropoff').value;
+            const price = document.getElementById('price').value;
+
+            if (!pickup || !dropoff || !price) {
+                alert("কোথা থেকে যাবেন, কোথায় যাবেন এবং ভাড়া উল্লেখ করুন!"); return;
+            }
+
+            const { error } = await supabaseClient.from('rides').insert([{
+                passenger_id: currentUser.id,
+                pickup_location: pickup,
+                dropoff_location: dropoff,
+                fare: price,
+                status: 'pending'
+            }]);
+
             if (error) {
                 alert("ডাটাবেস এরর: " + error.message);
             } else {
-                alert("প্রোফাইল তৈরি হয়েছে!");
-                checkUser(); 
+                alert("আপনার রাইড রিকোয়েস্ট চালকদের কাছে পাঠানো হয়েছে!");
             }
         }
 
-        async function requestRide() {
-            alert("রাইড খোঁজা হচ্ছে... (এর পরের ধাপে আমরা এই ডাটাগুলো ডাটাবেসে পাঠাবো)");
+        // চালকের স্ক্রিনে রাইড রিকোয়েস্ট দেখানোর ফাংশন
+        async function fetchRequests() {
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
+            
+            if (data && data.length > 0) {
+                let html = '';
+                data.forEach(ride => {
+                    html += `
+                    <div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left;">
+                        <p><b>লোকেশন:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p>
+                        <p><b>ভাড়া:</b> ${ride.fare} টাকা</p>
+                        <button class="btn" style="background-color: green; margin-bottom: 0;">এক্সেপ্ট করুন</button>
+                    </div>`;
+                });
+                document.getElementById('requests-list').innerHTML = html;
+            } else {
+                document.getElementById('requests-list').innerHTML = "<p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>";
+            }
         }
 
         function showSection(sectionId) {
