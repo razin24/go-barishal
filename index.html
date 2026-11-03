@@ -4,522 +4,516 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Go Barishal - Ride Sharing</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <!-- Google Fonts: Inter & Noto Sans Bengali -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { primary: '#3F0F8F', background: '#F4F0FB', card: '#FFFFFF', success: '#22A55B', warning: '#FFC83D', danger: '#D92D20', textDark: '#1B1330', textMuted: '#6B7280' },
-                    fontFamily: { sans: ['Inter', 'Noto Sans Bengali', 'sans-serif'] }
+                    colors: {
+                        primary: '#3F0F8F',
+                        background: '#F4F0FB',
+                        card: '#FFFFFF',
+                        success: '#22A55B',
+                        warning: '#FFC83D',
+                        danger: '#D92D20',
+                        textDark: '#1B1330',
+                        textMuted: '#6B7280'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans Bengali', 'sans-serif'],
+                    }
                 }
             }
         }
     </script>
 
     <style>
-        /* আপনার দেওয়া সম্পূর্ণ CSS ঠিক রাখা হয়েছে */
-        body { background-color: #e5e7eb; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; -webkit-tap-highlight-color: transparent; }
-        #app-container { width: 100%; max-width: 414px; height: 100dvh; max-height: 896px; background-color: #F4F0FB; position: relative; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; }
-        @media (min-width: 420px) { #app-container { border-radius: 40px; height: 90vh; border: 8px solid #1f2937; } }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; transform: translateY(10px); overflow-y: auto; overflow-x: hidden; background-color: #F4F0FB; z-index: 10; padding-bottom: 80px; }
-        .screen::-webkit-scrollbar { display: none; }
-        .screen.active { opacity: 1; pointer-events: auto; transform: translateY(0); z-index: 20; }
-        .map-screen { padding-bottom: 0; overflow: hidden; }
-        .map-container { width: 100%; height: 100%; z-index: 1; }
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; width: 100%; background-color: white; border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 1000; padding: 24px 20px; padding-bottom: env(safe-area-inset-bottom, 24px); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .screen.active .bottom-sheet { transform: translateY(0); }
-        .sheet-handle { width: 40px; height: 5px; background-color: #e5e7eb; border-radius: 10px; margin: 0 auto 20px auto; }
+        body {
+            background-color: #e5e7eb; /* Darker background for desktop to frame the app */
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Mobile App Container Simulation */
+        #app-container {
+            width: 100%;
+            max-width: 414px; /* iPhone Max Width */
+            height: 100dvh;
+            max-height: 896px;
+            background-color: #F4F0FB;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 420px) {
+            #app-container {
+                border-radius: 40px;
+                height: 90vh;
+                border: 8px solid #1f2937;
+            }
+        }
+
+        /* Screen Transitions */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            transform: translateY(10px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            background-color: #F4F0FB;
+            z-index: 10;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+        
+        .screen::-webkit-scrollbar {
+            display: none;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+            z-index: 20;
+        }
+
+        /* Full Screen Map specific screens */
+        .map-screen {
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Bottom Sheet Styles */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 24px 20px;
+            padding-bottom: env(safe-area-inset-bottom, 24px); /* For iPhones */
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .screen.active .bottom-sheet {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 5px;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            margin: 0 auto 20px auto;
+        }
+
+        /* Custom Toggle Switch for Driver Online/Offline */
         .toggle-checkbox:checked { right: 0; border-color: #3F0F8F; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3F0F8F; }
-        .floating-top-card { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; z-index: 1000; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .leaflet-control-container .leaflet-top { top: 80px; }
+        
+        /* Floating top card */
+        .floating-top-card {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            z-index: 1000;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Leaflet Fixes */
+        .leaflet-control-container .leaflet-top { top: 80px; } /* Push controls down */
     </style>
 </head>
 <body>
 
-<!-- আপনার দেওয়া সম্পূর্ণ HTML Structure (Screen 1 to Bottom Nav) এখানে হুবহু থাকবে -->
 <div id="app-container">
+
     <!-- 1. SPLASH / LOGIN SCREEN -->
     <div id="screen-login" class="screen flex flex-col items-center justify-center p-6 bg-white">
-        <div class="w-24 h-24 bg-primary text-white rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/30"><i class="fa-solid fa-car-side text-5xl"></i></div>
+        <div class="w-24 h-24 bg-primary text-white rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/30">
+            <i class="fa-solid fa-car-side text-5xl"></i>
+        </div>
         <h1 class="text-3xl font-bold text-primary mb-2">গো বরিশাল</h1>
         <p class="text-textMuted mb-12 text-center">বরিশালের নিজস্ব রাইড শেয়ারিং অ্যাপ</p>
+        
         <div class="w-full mt-10">
-            <button onclick="handleGoogleLogin()" class="w-full bg-white border-2 border-gray-100 text-textDark font-semibold py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 active:bg-gray-50 transition">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google"> গুগল দিয়ে লগইন করুন
+            <button onclick="mockGoogleLogin()" class="w-full bg-white border-2 border-gray-100 text-textDark font-semibold py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 active:bg-gray-50 transition">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
+                গুগল দিয়ে লগইন করুন
             </button>
         </div>
-        <div id="login-loading" class="hidden mt-6 text-primary flex flex-col items-center"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><p>অপেক্ষা করুন...</p></div>
+        
+        <div id="login-loading" class="hidden mt-6 text-primary flex flex-col items-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+            <p>অপেক্ষা করুন...</p>
+        </div>
     </div>
 
     <!-- 2. PROFILE SETUP SCREEN -->
     <div id="screen-setup" class="screen flex flex-col p-6 bg-white">
         <h2 class="text-2xl font-bold text-textDark mt-10 mb-2">প্রোফাইল তৈরি করুন</h2>
         <p class="text-textMuted mb-8">অ্যাপ ব্যবহার শুরু করতে আপনার তথ্য দিন</p>
+        
         <form id="profile-form" onsubmit="saveProfile(event)" class="flex flex-col gap-5 flex-grow">
-            <div><label class="block text-sm font-semibold text-textDark mb-1">পুরো নাম</label><input type="text" id="setup-name" required placeholder="আপনার নাম লিখুন" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition"></div>
-            <div><label class="block text-sm font-semibold text-textDark mb-1">মোবাইল নম্বর</label><input type="tel" id="setup-phone" required placeholder="017XXXXXXXX" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition"></div>
+            <div>
+                <label class="block text-sm font-semibold text-textDark mb-1">পুরো নাম</label>
+                <input type="text" id="setup-name" required placeholder="আপনার নাম লিখুন" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-textDark mb-1">মোবাইল নম্বর</label>
+                <input type="tel" id="setup-phone" required placeholder="017XXXXXXXX" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition">
+            </div>
+            
             <div>
                 <label class="block text-sm font-semibold text-textDark mb-2">আপনি কি হিসেবে অ্যাপ ব্যবহার করবেন?</label>
                 <div class="grid grid-cols-2 gap-3">
-                    <label class="cursor-pointer"><input type="radio" name="role" value="passenger" class="peer hidden" checked><div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition"><i class="fa-solid fa-person-walking-luggage text-2xl mb-2 text-textMuted peer-checked:text-primary"></i><div class="font-semibold text-textDark">যাত্রী</div></div></label>
-                    <label class="cursor-pointer"><input type="radio" name="role" value="driver" class="peer hidden"><div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition"><i class="fa-solid fa-motorcycle text-2xl mb-2 text-textMuted peer-checked:text-primary"></i><div class="font-semibold text-textDark">চালক</div></div></label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="role" value="passenger" class="peer hidden" checked>
+                        <div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition">
+                            <i class="fa-solid fa-person-walking-luggage text-2xl mb-2 text-textMuted peer-checked:text-primary"></i>
+                            <div class="font-semibold text-textDark">যাত্রী</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="role" value="driver" class="peer hidden">
+                        <div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition">
+                            <i class="fa-solid fa-motorcycle text-2xl mb-2 text-textMuted peer-checked:text-primary"></i>
+                            <div class="font-semibold text-textDark">চালক</div>
+                        </div>
+                    </label>
                 </div>
             </div>
-            <div class="mt-auto pt-6 pb-4"><button type="submit" id="btn-save-profile" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">সংরক্ষণ করুন ও শুরু করুন</button></div>
+            
+            <div class="mt-auto pt-6 pb-4">
+                <button type="submit" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">সংরক্ষণ করুন ও শুরু করুন</button>
+            </div>
         </form>
     </div>
 
     <!-- 3. PASSENGER DASHBOARD -->
     <div id="screen-passenger" class="screen map-screen">
         <div id="map-passenger" class="map-container"></div>
-        <div class="bottom-sheet pb-[90px]">
+        
+        <!-- Passenger Bottom Sheet -->
+        <div class="bottom-sheet pb-[90px]"> <!-- Extra padding for bottom nav -->
             <div class="sheet-handle"></div>
             <h3 class="text-xl font-bold mb-4">কোথায় যাবেন?</h3>
-            <div class="relative flex items-center mb-3 bg-background rounded-xl p-1 border border-gray-100"><i class="fa-solid fa-circle-dot text-primary ml-3 w-5 text-center"></i><input type="text" id="pass-pickup" placeholder="পিকআপ লোকেশন" value="নথুল্লাবাদ বাস স্ট্যান্ড" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium"></div>
-            <div class="relative flex items-center mb-4 bg-background rounded-xl p-1 border border-gray-100"><i class="fa-solid fa-location-dot text-danger ml-3 w-5 text-center"></i><input type="text" id="pass-dropoff" placeholder="গন্তব্য লিখুন (যেমন: সদর রোড)" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium"></div>
-            <div class="flex gap-3 mb-4">
-                <div onclick="selectVehicle('bike')" id="veh-bike" class="flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition"><i class="fa-solid fa-motorcycle text-3xl text-primary mb-1"></i><span class="text-sm font-semibold">বাইক</span></div>
-                <div onclick="selectVehicle('cng')" id="veh-cng" class="flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition"><i class="fa-solid fa-car text-3xl text-textMuted mb-1" id="veh-cng-icon"></i><span class="text-sm font-semibold text-textMuted" id="veh-cng-text">সিএনজি</span></div>
+            
+            <div class="relative flex items-center mb-3 bg-background rounded-xl p-1 border border-gray-100">
+                <i class="fa-solid fa-circle-dot text-primary ml-3 w-5 text-center"></i>
+                <input type="text" id="pass-pickup" placeholder="পিকআপ লোকেশন" value="নথুল্লাবাদ বাস স্ট্যান্ড" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium">
             </div>
-            <div class="relative flex items-center mb-5 bg-background rounded-xl p-1 border border-gray-100"><span class="ml-4 font-bold text-textMuted">৳</span><input type="number" id="pass-fare" placeholder="ভাড়া প্রস্তাব করুন" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-bold text-lg"></div>
-            <button onclick="requestRide()" id="btn-find-ride" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 transition flex justify-center items-center gap-2"><span>রাইড খুঁজুন</span></button>
-            <div id="active-ride-warning" class="hidden mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"><p>আপনার একটি রাইড ইতিমধ্যে চলমান আছে। বর্তমান রাইডটি শেষ হলে নতুন রাইড নিতে পারবেন।</p><button type="button" onclick="cancelRide()" class="mt-3 w-full rounded-lg border border-red-300 bg-white px-4 py-2 font-bold text-red-700">রাইড বাতিল করুন</button></div>
+            
+            <div class="relative flex items-center mb-4 bg-background rounded-xl p-1 border border-gray-100 focus-within:border-primary transition">
+                <i class="fa-solid fa-location-dot text-danger ml-3 w-5 text-center"></i>
+                <input type="text" id="pass-dropoff" placeholder="গন্তব্য লিখুন (যেমন: সদর রোড)" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium">
+            </div>
+
+            <!-- Vehicle Selection -->
+            <div class="flex gap-3 mb-4">
+                <div onclick="selectVehicle('bike')" id="veh-bike" class="flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition">
+                    <i class="fa-solid fa-motorcycle text-3xl text-primary mb-1"></i>
+                    <span class="text-sm font-semibold">বাইক</span>
+                </div>
+                <div onclick="selectVehicle('cng')" id="veh-cng" class="flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition">
+                    <i class="fa-solid fa-car text-3xl text-textMuted mb-1" id="veh-cng-icon"></i>
+                    <span class="text-sm font-semibold text-textMuted" id="veh-cng-text">সিএনজি</span>
+                </div>
+            </div>
+
+            <div class="relative flex items-center mb-5 bg-background rounded-xl p-1 border border-gray-100">
+                <span class="ml-4 font-bold text-textMuted">৳</span>
+                <input type="number" id="pass-fare" placeholder="ভাড়া প্রস্তাব করুন" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-bold text-lg">
+            </div>
+
+            <button onclick="requestRide()" id="btn-find-ride" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition flex justify-center items-center gap-2">
+                <span>রাইড খুঁজুন</span>
+            </button>
+            <div id="active-ride-warning" class="hidden mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800" role="alert" aria-live="polite"><p>আপনার একটি রাইড ইতিমধ্যে চলমান আছে। বর্তমান রাইডটি শেষ হলে নতুন রাইড নিতে পারবেন।</p><button type="button" onclick="cancelRide()" class="mt-3 w-full rounded-lg border border-red-300 bg-white px-4 py-2 font-bold text-red-700">রাইড বাতিল করুন</button></div>
         </div>
     </div>
 
     <!-- 4. DRIVER DASHBOARD -->
     <div id="screen-driver" class="screen map-screen">
         <div id="map-driver" class="map-container"></div>
-        <div class="floating-top-card bg-white p-3 flex justify-between items-center">
-            <div class="flex items-center gap-3"><div id="driver-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div><div><div id="driver-status-text" class="font-bold text-textDark text-sm">অফলাইন</div><div class="text-xs text-textMuted" id="driver-free-count">লোড হচ্ছে...</div></div></div>
-            <div class="relative inline-block w-12 align-middle select-none"><input type="checkbox" id="toggle-online" onchange="toggleOnlineStatus()" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10"/><label for="toggle-online" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label></div>
-        </div>
-        <div class="bottom-sheet pb-[90px] !translate-y-[120%]" id="driver-searching-sheet"><div class="flex flex-col items-center justify-center py-4"><div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 animate-pulse"><i class="fa-solid fa-radar fa-spin text-2xl text-primary"></i></div><h3 class="font-bold text-lg text-textDark">রাইড খোঁজা হচ্ছে...</h3><p class="text-sm text-textMuted">অনলাইনে থাকুন, রিকোয়েস্ট আসবে।</p></div></div>
         
-        <!-- Incoming Request Modal -->
-        <div id="incoming-request" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-2xl shadow-2xl p-5 z-[2000] border border-gray-100 hidden">
-            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3"><div class="text-sm font-bold text-textMuted">নতুন রিকোয়েস্ট</div><div class="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-lg">৳ <span id="req-fare">0</span></div></div>
-            <div class="relative pl-6 border-l-2 border-dashed border-gray-300 ml-2 space-y-4 mb-6 mt-4">
-                <div class="relative"><div class="absolute -left-[29px] top-1 w-3 h-3 bg-primary rounded-full ring-4 ring-white"></div><p class="text-xs text-textMuted font-bold">পিকআপ</p><p class="font-semibold text-textDark" id="req-pickup">-</p></div>
-                <div class="relative"><div class="absolute -left-[29px] top-1 w-3 h-3 bg-danger rounded-full ring-4 ring-white"></div><p class="text-xs text-textMuted font-bold">গন্তব্য</p><p class="font-semibold text-textDark" id="req-dropoff">-</p></div>
+        <!-- Driver Top Control Card -->
+        <div class="floating-top-card bg-white p-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div id="driver-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                <div>
+                    <div id="driver-status-text" class="font-bold text-textDark text-sm">অফলাইন</div>
+                    <div class="text-xs text-textMuted" id="driver-free-count">১৫টি ফ্রি রাইড বাকি</div>
+                </div>
             </div>
-            <div class="flex gap-2"><button onclick="acceptRequest()" id="btn-accept" class="flex-2 bg-success text-white font-bold py-3 px-4 rounded-xl flex-grow">গ্রহণ করুন</button><button onclick="rejectRequest()" class="flex-1 bg-gray-100 text-textDark font-bold py-3 px-4 rounded-xl">বাতিল</button></div>
+            
+            <!-- Tailwind toggle -->
+            <div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="toggle" id="toggle-online" onchange="toggleOnlineStatus()" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 z-10"/>
+                <label for="toggle-online" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300"></label>
+            </div>
         </div>
+        
+        <!-- Driver Bottom Sheet (Searching) -->
+        <div class="bottom-sheet pb-[90px] !translate-y-[120%]" id="driver-searching-sheet">
+            <div class="flex flex-col items-center justify-center py-4">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <i class="fa-solid fa-radar fa-spin text-2xl text-primary"></i>
+                </div>
+                <h3 class="font-bold text-lg text-textDark">রাইড খোঁজা হচ্ছে...</h3>
+                <p class="text-sm text-textMuted">অনলাইনে থাকুন, রিকোয়েস্ট আসবে।</p>
+            </div>
+        </div>
+
+        <!-- Incoming Request Modal (Absolute center) -->
+        <div id="incoming-request" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-2xl shadow-2xl p-5 z-[2000] border border-gray-100 hidden">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <div class="text-sm font-bold text-textMuted uppercase tracking-wider">নতুন রিকোয়েস্ট</div>
+                <div class="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-lg">৳ <span id="req-fare">৫০</span></div>
+            </div>
+            
+            <div class="relative pl-6 border-l-2 border-dashed border-gray-300 ml-2 space-y-4 mb-6 mt-4">
+                <div class="relative">
+                    <div class="absolute -left-[29px] top-1 w-3 h-3 bg-primary rounded-full ring-4 ring-white"></div>
+                    <p class="text-xs text-textMuted font-bold">পিকআপ (১.২ কিমি)</p>
+                    <p class="font-semibold text-textDark" id="req-pickup">নথুল্লাবাদ বাস স্ট্যান্ড</p>
+                </div>
+                <div class="relative">
+                    <div class="absolute -left-[29px] top-1 w-3 h-3 bg-danger rounded-full ring-4 ring-white"></div>
+                    <p class="text-xs text-textMuted font-bold">গন্তব্য (৩.৫ কিমি)</p>
+                    <p class="font-semibold text-textDark" id="req-dropoff">সদর রোড, বরিশাল</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="acceptRequest()" class="flex-2 bg-success text-white font-bold py-3 px-4 rounded-xl shadow-md active:scale-95 transition flex-grow text-center">গ্রহণ করুন</button>
+                <button onclick="rejectRequest()" class="flex-1 bg-gray-100 text-textDark font-bold py-3 px-4 rounded-xl active:scale-95 transition">বাতিল</button>
+            </div>
+        </div>
+        <!-- Overlay for Modal -->
         <div id="req-overlay" class="absolute inset-0 bg-black/40 z-[1500] hidden"></div>
     </div>
 
     <!-- 5. ACTIVE RIDE SCREEN -->
     <div id="screen-active-ride" class="screen map-screen">
         <div id="map-active" class="map-container"></div>
-        <div class="absolute top-0 left-0 w-full bg-warning text-textDark font-bold text-center py-3 z-[1000] shadow-md flex items-center justify-center gap-2" id="ride-status-banner"><i class="fa-solid fa-clock"></i> <span id="ride-status-text">স্ট্যাটাস লোড হচ্ছে...</span></div>
-        <div class="bottom-sheet pb-6 !translate-y-0 z-[1000]">
+        
+        <!-- Top Status Banner -->
+        <div class="absolute top-0 left-0 w-full bg-warning text-textDark font-bold text-center py-3 z-[1000] shadow-md flex items-center justify-center gap-2 pt-safe" id="ride-status-banner">
+            <i class="fa-solid fa-clock"></i> <span id="ride-status-text">চালক আপনার দিকে আসছেন (৩ মিনিট)</span>
+        </div>
+        
+        <!-- Active Ride Bottom Sheet -->
+        <div class="bottom-sheet pb-6 !translate-y-0 shadow-[0_-10px_25px_rgba(0,0,0,0.15)] z-[1000]">
             <div class="sheet-handle"></div>
+            
+            <!-- User Info Row -->
             <div class="flex justify-between items-center mb-5">
-                <div class="flex items-center gap-4"><div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-xl text-gray-500 overflow-hidden border-2 border-white shadow-sm"><i class="fa-solid fa-user"></i></div><div><h3 class="font-bold text-lg text-textDark" id="active-peer-name">-</h3><p class="text-textMuted text-sm" id="active-peer-details">মোবাইল: লোড হচ্ছে...</p></div></div>
-                <div class="text-right"><p class="font-bold text-2xl text-primary" id="active-fare">৳ 0</p><p class="text-xs font-semibold text-textMuted bg-gray-100 px-2 py-1 rounded mt-1 inline-block">ক্যাশ</p></div>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-xl text-gray-500 overflow-hidden border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-textDark" id="active-peer-name">নাম লোড হচ্ছে...</h3>
+                        <p class="text-textMuted text-sm" id="active-peer-details">হোন্ডা সিবি হর্নেট • ভোলা ১১-২২৩৩</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-2xl text-primary" id="active-fare">৳ ৫০</p>
+                    <p class="text-xs font-semibold text-textMuted bg-gray-100 px-2 py-1 rounded mt-1 inline-block">ক্যাশ</p>
+                </div>
             </div>
+
+            <!-- Action Buttons Row 1 -->
             <div class="flex gap-3 mb-4">
-                <a id="active-call-link" href="#" class="flex-1 bg-primary/10 text-primary font-bold py-3.5 rounded-xl flex items-center justify-center gap-2"><i class="fa-solid fa-phone"></i> কল করুন</a>
-                <button id="btn-driver-action" onclick="advanceRide()" class="hidden flex-2 bg-success text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 flex-grow"><i class="fa-solid fa-location-arrow"></i> <span id="driver-action-text">পৌঁছেছি</span></button>
+                <a id="active-call-link" href="#" class="flex-1 bg-primary/10 text-primary font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:bg-primary/20 transition">
+                    <i class="fa-solid fa-phone"></i> কল করুন
+                </a>
+                
+                <!-- Driver Action Button (Hidden for Passenger) -->
+                <button id="btn-driver-action" onclick="advanceRide()" class="hidden flex-2 bg-success text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-success/30 transition flex-grow">
+                    <i class="fa-solid fa-location-arrow"></i> <span id="driver-action-text">পৌঁছেছি</span>
+                </button>
             </div>
-            <a href="tel:999" class="w-full bg-danger/10 text-danger border border-danger/20 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 mb-3"><i class="fa-solid fa-triangle-exclamation"></i> 999 - জরুরি সাহায্য</a>
-            <div class="text-center"><button onclick="cancelRide()" class="text-sm font-semibold text-textMuted py-2 px-4 rounded">রাইড বাতিল করুন</button></div>
+
+            <!-- Emergency Button -->
+            <a href="tel:999" class="w-full bg-danger/10 text-danger border border-danger/20 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 active:bg-danger/20 transition mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i> 999 - জরুরি সাহায্য
+            </a>
+            
+            <div class="text-center">
+                <button onclick="cancelRide()" class="text-sm font-semibold text-textMuted py-2 px-4 rounded active:bg-gray-100 transition">রাইড বাতিল করুন</button>
+            </div>
         </div>
     </div>
 
     <!-- 6. HISTORY SCREEN -->
     <div id="screen-history" class="screen bg-background">
-        <div class="bg-white px-6 pt-10 pb-4 shadow-sm sticky top-0 z-10"><h2 class="text-2xl font-bold text-textDark">ট্রিপ হিস্ট্রি</h2></div>
-        <div class="p-4 space-y-4" id="history-list"></div>
+        <div class="bg-white px-6 pt-10 pb-4 shadow-sm sticky top-0 z-10">
+            <h2 class="text-2xl font-bold text-textDark">ট্রিপ হিস্ট্রি</h2>
+        </div>
+        
+        <div class="p-4 space-y-4" id="history-list">
+            <!-- Populated by JS -->
+            <div class="text-center text-textMuted py-10">
+                <i class="fa-solid fa-route text-4xl mb-3 opacity-50"></i>
+                <p>কোনো পূর্ববর্তী ট্রিপ নেই</p>
+            </div>
+        </div>
     </div>
 
     <!-- 7. PROFILE SCREEN -->
     <div id="screen-profile" class="screen bg-background">
         <div class="bg-white px-6 pt-10 pb-6 shadow-sm flex flex-col items-center">
-            <div class="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-4xl text-primary mb-4 border-4 border-white shadow-sm relative"><i class="fa-solid fa-user"></i></div>
+            <div class="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-4xl text-primary mb-4 border-4 border-white shadow-sm relative">
+                <i class="fa-solid fa-user"></i>
+                <div class="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow">
+                    <div class="bg-primary w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                </div>
+            </div>
             <h2 class="text-2xl font-bold text-textDark" id="profile-display-name">নাম</h2>
-            <p class="text-textMuted mb-2" id="profile-display-phone">-</p>
-            <div class="bg-gray-100 text-textDark px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-circle text-[8px] text-success"></i> <span id="profile-display-role">-</span></div>
+            <p class="text-textMuted mb-2" id="profile-display-phone">017XXXXXXXX</p>
+            <div class="bg-gray-100 text-textDark px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-circle text-[8px] text-success"></i> <span id="profile-display-role">যাত্রী</span>
+            </div>
         </div>
+        
         <div class="p-4 mt-2">
-            <button onclick="logout()" class="w-full bg-white text-danger font-bold py-4 rounded-2xl shadow-sm border border-danger/10 flex items-center justify-center gap-2"><i class="fa-solid fa-arrow-right-from-bracket"></i> লগ আউট করুন</button>
+            <div class="bg-white rounded-2xl p-2 shadow-sm mb-4">
+                <div class="flex items-center gap-4 p-3 active:bg-gray-50 transition rounded-xl cursor-pointer" onclick="editProfile()">
+                    <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </div>
+                    <div class="flex-grow font-semibold text-textDark">প্রোফাইল আপডেট করুন</div>
+                    <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                </div>
+                
+                <div class="h-[1px] bg-gray-100 mx-4"></div>
+                
+                <div class="flex items-center gap-4 p-3 active:bg-gray-50 transition rounded-xl cursor-pointer" id="menu-subscription" style="display: none;">
+                    <div class="w-10 h-10 bg-warning/20 rounded-full flex items-center justify-center text-warning">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="font-semibold text-textDark">প্যাকেজ ও পেমেন্ট</div>
+                        <div class="text-xs text-textMuted">১৫ রাইড বাকি</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                </div>
+            </div>
+            
+            <button onclick="logout()" class="w-full bg-white text-danger font-bold py-4 rounded-2xl shadow-sm border border-danger/10 active:bg-red-50 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> লগ আউট করুন
+            </button>
         </div>
     </div>
 
-    <!-- BOTTOM NAV -->
-    <nav id="bottom-nav" class="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center pt-3 shadow-[0_-5px_15px_rgba(0,0,0,0.03)] z-[500] hidden pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-        <div onclick="navigateHome()" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16" data-target="home"><i class="fa-solid fa-compass text-xl text-primary"></i><span class="text-[10px] font-bold text-primary">হোম</span></div>
-        <div onclick="navigate('screen-history')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-history"><i class="fa-solid fa-clock-rotate-left text-xl"></i><span class="text-[10px] font-semibold">হিসট্রি</span></div>
-        <div onclick="navigate('screen-profile')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-profile"><i class="fa-regular fa-user text-xl"></i><span class="text-[10px] font-semibold">প্রোফাইল</span></div>
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav id="bottom-nav" class="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center pt-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)] z-[500] hidden pb-[calc(env(safe-area-inset-bottom,0px)+12px)] transition-transform">
+        <div onclick="navigateHome()" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16" data-target="home">
+            <i class="fa-solid fa-compass text-xl text-primary transition-colors"></i>
+            <span class="text-[10px] font-bold text-primary transition-colors">হোম</span>
+        </div>
+        <div onclick="navigate('screen-history')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-history">
+            <i class="fa-solid fa-clock-rotate-left text-xl transition-colors"></i>
+            <span class="text-[10px] font-semibold transition-colors">হিসট্রি</span>
+        </div>
+        <div onclick="navigate('screen-profile')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-profile">
+            <i class="fa-regular fa-user text-xl transition-colors"></i>
+            <span class="text-[10px] font-semibold transition-colors">প্রোফাইল</span>
+        </div>
     </nav>
+
 </div>
 
 <script>
-    /* ========== SUPABASE INITIALIZATION ========== */
-    const SUPABASE_URL = 'https://bgtauxcgptxddbtbaxmx.supabase.co';
-    const SUPABASE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY_HERE'; // <-- আপনার publishable key এখানে বসাবেন
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    /* ========== STATE ========== */
-    let sessionUser = null;
-    let userProfile = null;
-    let currentRide = null;
-    let isDriverOnline = false;
-    let selectedVehicle = 'bike';
-    let userLat = null, userLng = null;
-    let maps = {};
-    let activeSubscription = null;
-    
-    const $ = id => document.getElementById(id);
-    const BARISHAL = [22.7010, 90.3535];
-
-    /* ========== AUTHENTICATION ========== */
-    document.addEventListener('DOMContentLoaded', async () => {
-        initServiceWorker();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            sessionUser = session.user;
-            await loadProfile();
-        } else {
-            navigate('screen-login');
-        }
-
-        // Listen for Auth changes
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                sessionUser = session.user;
-                await loadProfile();
-            } else if (event === 'SIGNED_OUT') {
-                sessionUser = null; userProfile = null; navigate('screen-login');
-            }
-        });
-    });
-
-    async function handleGoogleLogin() {
-        $('login-loading').classList.remove('hidden');
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-        if (error) { alert('লগইন ব্যর্থ হয়েছে: ' + error.message); $('login-loading').classList.add('hidden'); }
-    }
-
-    async function logout() {
-        if(confirm('লগ আউট করতে চান?')) await supabase.auth.signOut();
-    }
-
-    /* ========== PROFILE MANAGEMENT ========== */
-    async function loadProfile() {
-        const { data, error } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
-        if (error || !data) {
-            $('setup-name').value = sessionUser.user_metadata?.full_name || '';
-            navigate('screen-setup');
-        } else {
-            userProfile = data;
-            setupProfileData();
-            checkActiveRide();
-            navigateHome();
-            subscribeToRides();
-        }
-    }
-
-    async function saveProfile(e) {
-        e.preventDefault();
-        const name = $('setup-name').value.trim();
-        const phone = $('setup-phone').value.trim();
-        const role = document.querySelector('input[name="role"]:checked').value;
-        
-        $('btn-save-profile').disabled = true;
-        const { error } = await supabase.from('profiles').upsert({
-            id: sessionUser.id, name, phone, role
-        });
-        $('btn-save-profile').disabled = false;
-
-        if (error) alert('প্রোফাইল সেভ করতে সমস্যা হয়েছে।');
-        else await loadProfile();
-    }
-
-    function setupProfileData() {
-        $('profile-display-name').textContent = userProfile.name;
-        $('profile-display-phone').textContent = userProfile.phone;
-        $('profile-display-role').textContent = userProfile.role === 'passenger' ? 'যাত্রী' : 'চালক';
-        if(userProfile.role === 'driver') $('driver-free-count').textContent = `${userProfile.free_rides}টি ফ্রি রাইড বাকি`;
-    }
-
-    /* ========== REALTIME SYNC ========== */
-    function subscribeToRides() {
-        if (activeSubscription) supabase.removeChannel(activeSubscription);
-        
-        activeSubscription = supabase.channel('rides-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
-                const updatedRide = payload.new;
-                
-                // Passenger logic
-                if (userProfile.role === 'passenger' && updatedRide.passenger_id === userProfile.id) {
-                    currentRide = updatedRide;
-                    handleRideStateChange();
-                }
-                
-                // Driver Logic
-                if (userProfile.role === 'driver') {
-                    if (updatedRide.status === 'pending' && isDriverOnline && !currentRide) {
-                        showIncomingRequest(updatedRide);
-                    } else if (updatedRide.driver_id === userProfile.id) {
-                        currentRide = updatedRide;
-                        handleRideStateChange();
-                    }
-                }
-            }).subscribe();
-    }
-
-    /* ========== CORE RIDE LOGIC ========== */
-    async function checkActiveRide() {
-        const { data, error } = await supabase.from('rides')
-            .select('*, driver:driver_id(name, phone)')
-            .or(`passenger_id.eq.${userProfile.id},driver_id.eq.${userProfile.id}`)
-            .not('status', 'in', '("completed","cancelled","rejected","expired")')
-            .order('created_at', { ascending: false }).limit(1);
-        
-        if (data && data.length > 0) {
-            currentRide = data[0];
-            handleRideStateChange();
-        } else {
-            currentRide = null;
-            resetUI();
-        }
-    }
-
-    async function requestRide() {
-        if (currentRide) return alert('আপনার একটি রাইড ইতিমধ্যে চলমান আছে।');
-        
-        const pickup = $('pass-pickup').value.trim();
-        const dropoff = $('pass-dropoff').value.trim();
-        const fare = Number($('pass-fare').value);
-
-        if (!pickup || !dropoff || fare < 20) return alert('সঠিক তথ্য ও ভাড়া (সর্বনিম্ন ২০৳) দিন।');
-        
-        $('btn-find-ride').disabled = true;
-        const { data, error } = await supabase.from('rides').insert([{
-            passenger_id: userProfile.id, pickup, dropoff, vehicle: selectedVehicle, fare, status: 'pending'
-        }]).select().single();
-        
-        if (error) {
-            alert('রাইড রিকোয়েস্ট ব্যর্থ হয়েছে।');
-            $('btn-find-ride').disabled = false;
-        } else {
-            currentRide = data;
-            handleRideStateChange();
-        }
-    }
-
-    function showIncomingRequest(ride) {
-        currentRide = ride;
-        $('req-fare').textContent = ride.fare;
-        $('req-pickup').textContent = ride.pickup;
-        $('req-dropoff').textContent = ride.dropoff;
-        $('req-overlay').classList.remove('hidden');
-        $('incoming-request').classList.remove('hidden');
-    }
-
-    async function acceptRequest() {
-        $('btn-accept').disabled = true;
-        
-        // Use RPC to prevent race conditions (multiple drivers accepting)
-        const { data, error } = await supabase.rpc('accept_ride', { 
-            p_ride_id: currentRide.id, p_driver_id: userProfile.id 
-        });
-
-        $('btn-accept').disabled = false;
-        
-        if (data === true) {
-            $('req-overlay').classList.add('hidden');
-            $('incoming-request').classList.add('hidden');
-            // Realtime will catch this and trigger handleRideStateChange
-        } else {
-            alert('দুঃখিত, রাইডটি অন্য চালক গ্রহণ করেছেন বা বাতিল হয়েছে।');
-            rejectRequest();
-        }
-    }
-
-    function rejectRequest() {
-        currentRide = null;
-        $('req-overlay').classList.add('hidden');
-        $('incoming-request').classList.add('hidden');
-    }
-
-    async function advanceRide() {
-        if (!currentRide || currentRide.driver_id !== userProfile.id) return;
-        
-        let newStep = currentRide.step + 1;
-        let newStatus = currentRide.status;
-        
-        if (newStep === 1) newStatus = 'arrived';
-        else if (newStep === 2) newStatus = 'started';
-        else {
-            const { data } = await supabase.rpc('complete_ride', { p_ride_id: currentRide.id, p_driver_id: userProfile.id });
-            if(data) {
-                alert('ট্রিপ সফলভাবে শেষ হয়েছে।');
-                currentRide = null;
-                await loadProfile(); // Update free ride count
-                navigateHome();
-            }
-            return;
-        }
-        
-        await supabase.from('rides').update({ step: newStep, status: newStatus }).eq('id', currentRide.id);
-    }
-
-    async function cancelRide() {
-        if (!confirm('রাইডটি বাতিল করতে চান?')) return;
-        await supabase.from('rides').update({ status: 'cancelled' }).eq('id', currentRide.id);
-        alert('রাইডটি বাতিল করা হয়েছে।');
-        currentRide = null;
-        resetUI();
-        navigateHome();
-    }
-
-    /* ========== UI UPDATES ========== */
-    function handleRideStateChange() {
-        if (!currentRide) return;
-        
-        if (['completed', 'cancelled', 'rejected', 'expired'].includes(currentRide.status)) {
-            if(currentRide.status !== 'completed' && userProfile.role === 'passenger') {
-                alert('রাইডটি শেষ বা বাতিল করা হয়েছে।');
-            }
-            currentRide = null;
-            resetUI();
-            navigateHome();
-            return;
-        }
-
-        if (userProfile.role === 'passenger') {
-            $('active-ride-warning').classList.toggle('hidden', currentRide.status !== 'pending');
-            $('btn-find-ride').disabled = true;
-            if (currentRide.status !== 'pending') renderActiveRide();
-        } else if (userProfile.role === 'driver') {
-            if (currentRide.status !== 'pending') renderActiveRide();
-        }
-    }
-
-    function renderActiveRide() {
-        $('active-fare').textContent = '৳ ' + currentRide.fare;
-        $('active-peer-details').textContent = `${currentRide.pickup} → ${currentRide.dropoff}`;
-        
-        if (userProfile.role === 'driver') {
-            $('btn-driver-action').classList.remove('hidden');
-            const labels = ['পৌঁছেছি', 'ট্রিপ শুরু করুন', 'ট্রিপ শেষ করুন'];
-            $('driver-action-text').textContent = labels[currentRide.step] || labels[0];
-            $('active-peer-name').textContent = "যাত্রী (ID: " + currentRide.passenger_id.substring(0,5) + ")";
-            $('ride-status-text').textContent = 'আপনি ট্রিপে আছেন';
-        } else {
-            $('btn-driver-action').classList.add('hidden');
-            $('active-peer-name').textContent = currentRide.driver ? currentRide.driver.name : "চালক";
-            $('active-call-link').href = currentRide.driver ? "tel:" + currentRide.driver.phone : "#";
-            
-            const pStats = {'accepted': 'চালক রাইড গ্রহণ করেছেন', 'arrived': 'চালক পিকআপে পৌঁছেছেন', 'started': 'ট্রিপ চলছে'};
-            $('ride-status-text').textContent = pStats[currentRide.status];
-        }
-        navigate('screen-active-ride');
-    }
-
-    function resetUI() {
-        $('btn-find-ride').disabled = false;
-        $('active-ride-warning').classList.add('hidden');
-    }
-
-    /* ========== NAVIGATION & MAPS ========== */
-    function navigateHome() {
-        if (!userProfile) return navigate('screen-login');
-        navigate(userProfile.role === 'passenger' ? 'screen-passenger' : 'screen-driver');
-        updateNavUI('home');
-    }
-
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        const target = $(id); if (!target) return;
-        target.classList.add('active'); target.scrollTop = 0;
-        
-        const nav = ['screen-passenger', 'screen-driver', 'screen-history', 'screen-profile'];
-        if (nav.includes(id)) {
-            $('bottom-nav').classList.remove('hidden', 'translate-y-full');
-            if (id === 'screen-history' || id === 'screen-profile') updateNavUI(id);
-        } else {
-            $('bottom-nav').classList.add('translate-y-full');
-            setTimeout(() => $('bottom-nav').classList.add('hidden'), 300);
-        }
-        
-        if (id.includes('map') || id.includes('passenger') || id.includes('driver') || id.includes('active')) {
-            const mapId = target.querySelector('.map-container')?.id;
-            if(mapId) initMap(mapId);
-        }
-        if (id === 'screen-history') renderHistory();
-    }
-
-    function updateNavUI(id) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-            const active = item.dataset.target === id || (id === 'home' && item.dataset.target === 'home');
-            item.classList.toggle('text-primary', active); item.classList.toggle('text-textMuted', !active);
-            item.querySelector('i').className = item.querySelector('i').className.replace(/text-primary|text-textMuted/g, '') + (active ? ' text-primary' : ' text-textMuted');
-            item.querySelector('span').className = item.querySelector('span').className.replace(/text-primary|text-textMuted/g, '') + (active ? ' text-primary' : ' text-textMuted');
-        });
-    }
-
-    function selectVehicle(type) {
-        selectedVehicle = type;
-        $('veh-bike').className = 'flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer ' + (type === 'bike' ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white');
-        $('veh-cng').className = 'flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer ' + (type === 'cng' ? 'border-primary bg-primary/5' : 'border-gray-100 bg-white');
-    }
-
-    function toggleOnlineStatus() {
-        isDriverOnline = $('toggle-online').checked;
-        $('driver-status-text').textContent = isDriverOnline ? 'অনলাইন' : 'অফলাইন';
-        $('driver-status-text').className = 'font-bold text-sm ' + (isDriverOnline ? 'text-success' : 'text-textDark');
-        $('driver-status-indicator').className = 'w-3 h-3 rounded-full ' + (isDriverOnline ? 'bg-success' : 'bg-gray-400');
-        $('driver-searching-sheet').classList.toggle('!translate-y-[120%]', !isDriverOnline);
-        if (!isDriverOnline) rejectRequest();
-    }
-
-    async function renderHistory() {
-        const { data } = await supabase.from('rides')
-            .select('*').or(`passenger_id.eq.${userProfile.id},driver_id.eq.${userProfile.id}`)
-            .order('created_at', { ascending: false }).limit(20);
-            
-        const list = $('history-list');
-        if (!data || !data.length) {
-            list.innerHTML = '<div class="text-center text-textMuted py-10"><i class="fa-solid fa-route text-4xl mb-3 opacity-50"></i><p>কোনো পূর্ববর্তী ট্রিপ নেই</p></div>';
-            return;
-        }
-        list.innerHTML = data.map(r => `<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><div class="flex justify-between border-b pb-3 mb-3"><span>${new Date(r.created_at).toLocaleString('bn-BD')}</span><b>৳ ${r.fare}</b></div><p>পিকআপ: ${r.pickup}</p><p>গন্তব্য: ${r.dropoff}</p><small>অবস্থা: ${r.status}</small></div>`).join('');
-    }
-
-    function initMap(elementId) {
-        if (!window.L) return;
-        if (maps[elementId]) { setTimeout(() => maps[elementId].invalidateSize(), 250); return; }
-        const map = L.map(elementId).setView([BARISHAL[0], BARISHAL[1]], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        maps[elementId] = map;
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(pos => {
-                userLat = pos.coords.latitude; userLng = pos.coords.longitude;
-                map.setView([userLat, userLng], 15);
-                L.marker([userLat, userLng]).addTo(map);
-            }, () => {}, { enableHighAccuracy: true });
-        }
-    }
-
-    /* ========== PUSH NOTIFICATIONS SETUP ========== */
-    async function initServiceWorker() {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            try {
-                const swReg = await navigator.serviceWorker.register('/sw.js');
-                // Push request logic will be triggered logically after login
-            } catch(e) { console.error('SW Registration failed', e); }
-        }
-    }
+'use strict';
+const STORE={user:'gb_user',ride:'gb_active_ride',rides:'gb_ride_history',free:'gb_driver_free_rides'};
+let currentUser=null, maps={}, selectedVehicle='bike', isDriverOnline=false, rideState=0, currentRide=null, userLat=null,userLng=null;
+const BARISHAL=[22.7010,90.3535];
+const $=id=>document.getElementById(id);
+function read(key,fallback=null){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
+function write(key,value){localStorage.setItem(key,JSON.stringify(value))}
+document.addEventListener('DOMContentLoaded',()=>{expireOldPendingRide();checkAuth();window.addEventListener('storage',onStorageChange);if('BroadcastChannel'in window){window.rideChannel=new BroadcastChannel('go-barishal-rides');window.rideChannel.onmessage=e=>handleRideUpdate(e.data)}});
+function broadcast(type,ride){const msg={type,ride};try{window.rideChannel?.postMessage(msg)}catch{}}
+function checkAuth(){currentUser=read(STORE.user);if(currentUser?.name&&currentUser?.phone&&currentUser?.role){setupProfileData();navigateHome()}else navigate('screen-login')}
+function mockGoogleLogin(){const btn=$('screen-login').querySelector('button');$('login-loading').classList.remove('hidden');btn.disabled=true;setTimeout(()=>{btn.disabled=false;$('login-loading').classList.add('hidden');currentUser=read(STORE.user);if(currentUser?.name&&currentUser?.phone&&currentUser?.role){setupProfileData();navigateHome()}else{$('setup-name').value='';$('setup-phone').value='';$('profile-form').dataset.edit='false';navigate('screen-setup')}},250)}
+function saveProfile(e){e.preventDefault();const name=$('setup-name').value.trim(),phone=$('setup-phone').value.trim(),role=document.querySelector('input[name="role"]:checked')?.value;if(!name||!/^01[3-9]\d{8}$/.test(phone)){alert('সঠিক নাম ও ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দিন।');return}const old=read(STORE.user,{});currentUser={...old,id:old.id||'USER_'+crypto.randomUUID(),name,phone,role,joinedAt:old.joinedAt||new Date().toISOString()};write(STORE.user,currentUser);setupProfileData();$('profile-form').dataset.edit='false';navigateHome()}
+function setupProfileData(){if(!currentUser)return;$('profile-display-name').textContent=currentUser.name;$('profile-display-phone').textContent=currentUser.phone;$('profile-display-role').textContent=currentUser.role==='passenger'?'যাত্রী':'চালক';$('menu-subscription').style.display=currentUser.role==='driver'?'flex':'none';updateFreeRideLabel()}
+function editProfile(){if(!currentUser)return;$('setup-name').value=currentUser.name;$('setup-phone').value=currentUser.phone;const r=document.querySelector(`input[name="role"][value="${currentUser.role}"]`);if(r)r.checked=true;$('profile-form').dataset.edit='true';navigate('screen-setup')}
+function logout(){if(confirm('আপনি কি লগ আউট করতে চান?')){localStorage.removeItem(STORE.user);currentUser=null;navigate('screen-login')}}
+function navigateHome(){if(!currentUser)return navigate('screen-login');navigate(currentUser.role==='passenger'?'screen-passenger':'screen-driver');updateNavUI('home')}
+function navigate(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const target=$(id);if(!target)return;target.classList.add('active');target.scrollTop=0;const nav=['screen-passenger','screen-driver','screen-history','screen-profile'];if(nav.includes(id)){$('bottom-nav').classList.remove('hidden','translate-y-full');if(id==='screen-history'||id==='screen-profile')updateNavUI(id)}else{$('bottom-nav').classList.add('translate-y-full');setTimeout(()=>$('bottom-nav').classList.add('hidden'),300)}if(id==='screen-passenger'){initMap('map-passenger');updatePassengerRideNotice();}if(id==='screen-driver')initMap('map-driver');if(id==='screen-active-ride')initMap('map-active');if(id==='screen-history')renderHistory()}
+function updateNavUI(id){document.querySelectorAll('.nav-item').forEach(item=>{const active=item.dataset.target===id||(id==='home'&&item.dataset.target==='home');item.classList.toggle('text-primary',active);item.classList.toggle('text-textMuted',!active);item.querySelector('i').classList.toggle('text-primary',active);item.querySelector('i').classList.toggle('text-textMuted',!active);item.querySelector('span').classList.toggle('text-primary',active);item.querySelector('span').classList.toggle('text-textMuted',!active)})}
+function initMap(elementId){const el=$(elementId);if(!el||!window.L)return;if(maps[elementId]){setTimeout(()=>maps[elementId].invalidateSize(),250);return}const map=L.map(elementId).setView([userLat??BARISHAL[0],userLng??BARISHAL[1]],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);maps[elementId]=map;if(userLat!==null)addMarker(elementId,[userLat,userLng],'#3F0F8F','fa-location-crosshairs');setTimeout(()=>map.invalidateSize(),300);if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{userLat=pos.coords.latitude;userLng=pos.coords.longitude;if(maps[elementId]){maps[elementId].setView([userLat,userLng],15);addMarker(elementId,[userLat,userLng],'#3F0F8F','fa-location-crosshairs')}},()=>{}, {enableHighAccuracy:true,timeout:8000})}
+function addMarker(mapId,latlng,color,iconClass){const map=maps[mapId];if(!map)return;const icon=L.divIcon({className:'custom-div-icon',html:`<div style="background:${color};width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:3px solid white"><i class="fa-solid ${iconClass}"></i></div>`,iconSize:[30,30],iconAnchor:[15,15]});L.marker(latlng,{icon}).addTo(map)}
+function selectVehicle(type){selectedVehicle=type;const bike=$('veh-bike'),cng=$('veh-cng');bike.className='flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer '+(type==='bike'?'border-primary bg-primary/5':'border-gray-100 bg-white');cng.className='flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer '+(type==='cng'?'border-primary bg-primary/5':'border-gray-100 bg-white');$('veh-bike').querySelector('i').className='fa-solid fa-motorcycle text-3xl mb-1 '+(type==='bike'?'text-primary':'text-textMuted');$('veh-cng-icon').className='fa-solid fa-car text-3xl mb-1 '+(type==='cng'?'text-primary':'text-textMuted');$('veh-cng-text').className='text-sm font-semibold '+(type==='cng'?'text-primary':'text-textMuted')}
+function expireOldPendingRide(){const ride=read(STORE.ride);if(ride?.status==='pending'&&ride.createdAt&&Date.now()-new Date(ride.createdAt).getTime()>10*60*1000){ride.status='expired';ride.expiredAt=new Date().toISOString();write(STORE.ride,ride);broadcast('ride-updated',ride)}}
+function hasActivePassengerRide(){const ride=read(STORE.ride);return !!(ride&&ride.passengerId===currentUser?.id&&!['completed','cancelled','rejected','expired'].includes(ride.status))}
+function updatePassengerRideNotice(){const warning=$('active-ride-warning'),button=$('btn-find-ride');if(!warning||!button)return;const active=hasActivePassengerRide();warning.classList.toggle('hidden',!active);button.disabled=active;if(active){button.innerHTML='বর্তমান রাইড চলমান';}else{button.innerHTML='<span>রাইড খুঁজুন</span>';}}
+function requestRide(){expireOldPendingRide();if(!currentUser||currentUser.role!=='passenger')return alert('রাইড নিতে যাত্রী হিসেবে লগইন করুন।');if(hasActivePassengerRide()){updatePassengerRideNotice();return alert('আপনার একটি রাইড ইতিমধ্যে চলমান আছে। বর্তমান রাইডটি শেষ হলে নতুন রাইড নিতে পারবেন।')}const pickup=$('pass-pickup').value.trim(),dropoff=$('pass-dropoff').value.trim(),fare=Number($('pass-fare').value);if(!pickup)return alert('পিকআপের স্থান লিখুন');if(!dropoff)return alert('গন্তব্য লিখুন');if(!Number.isFinite(fare)||fare<20)return alert('সঠিক ভাড়া দিন (সর্বনিম্ন ২০ টাকা)');const ride={id:'RIDE_'+crypto.randomUUID(),passengerId:currentUser?.id,passengerName:currentUser?.name||'যাত্রী',passengerPhone:currentUser?.phone||'',pickup,dropoff,vehicle:selectedVehicle,fare,status:'pending',createdAt:new Date().toISOString(),driverId:null,driverName:null,driverPhone:null,step:0};write(STORE.ride,ride);currentRide=ride;broadcast('ride-updated',ride);updatePassengerRideNotice();alert('রাইড রিকোয়েস্ট পাঠানো হয়েছে। চালক গ্রহণ করলে এখানে আপডেট দেখাবে।')}
+function showIncomingRequest(){expireOldPendingRide();const ride=read(STORE.ride);if(!ride||ride.status!=='pending'||!ride.passengerId||ride.passengerId===currentUser?.id||currentUser?.role!=='driver'||!isDriverOnline)return;currentRide=ride;$('req-fare').textContent=ride.fare;$('req-pickup').textContent=ride.pickup;$('req-dropoff').textContent=ride.dropoff;$('req-overlay').classList.remove('hidden');$('incoming-request').classList.remove('hidden')}
+function toggleOnlineStatus(){isDriverOnline=$('toggle-online').checked;$('driver-status-text').textContent=isDriverOnline?'অনলাইন':'অফলাইন';$('driver-status-text').className='font-bold text-sm '+(isDriverOnline?'text-success':'text-textDark');$('driver-status-indicator').className='w-3 h-3 rounded-full '+(isDriverOnline?'bg-success':'bg-gray-400');$('driver-searching-sheet').classList.toggle('!translate-y-[120%]',!isDriverOnline);if(isDriverOnline)showIncomingRequest();else{$('incoming-request').classList.add('hidden');$('req-overlay').classList.add('hidden')}}
+function rejectRequest(){const ride=read(STORE.ride);if(ride?.status==='pending'){ride.status='rejected';write(STORE.ride,ride);broadcast('ride-updated',ride)}$('req-overlay').classList.add('hidden');$('incoming-request').classList.add('hidden')}
+function acceptRequest(){expireOldPendingRide();const ride=read(STORE.ride);if(!ride||ride.status!=='pending'||!ride.passengerId||ride.passengerId===currentUser?.id)return alert('এই রাইডটি আর পাওয়া যাচ্ছে না বা গ্রহণযোগ্য নয়।');ride.status='accepted';ride.driverId=currentUser?.id;ride.driverName=currentUser?.name||'চালক';ride.driverPhone=currentUser?.phone||'';ride.acceptedAt=new Date().toISOString();ride.step=0;write(STORE.ride,ride);currentRide=ride;broadcast('ride-updated',ride);$('req-overlay').classList.add('hidden');$('incoming-request').classList.add('hidden');renderActiveRide()}
+function handleRideUpdate(msg){if(!msg?.ride)return;currentRide=msg.ride;syncRideUI(msg.ride)}
+function onStorageChange(e){if(e.key===STORE.ride){const ride=read(STORE.ride);if(ride){currentRide=ride;syncRideUI(ride)}else resetPassengerRequest()}if(e.key===STORE.free)updateFreeRideLabel()}
+function syncRideUI(ride){if(currentUser?.role==='passenger'&&ride.passengerId===currentUser.id){if(ride.status==='accepted'||ride.status==='arrived'||ride.status==='started')renderActiveRide();else if(ride.status==='completed'){alert('আপনার রাইড সম্পন্ন হয়েছে।');navigateHome();resetPassengerRequest()}else if(ride.status==='cancelled'||ride.status==='rejected'||ride.status==='expired'){alert(ride.status==='expired'?'রিকোয়েস্টের সময় শেষ হয়েছে। নতুন করে রাইড চাইতে পারেন।':'রাইডটি বাতিল/প্রত্যাখ্যান করা হয়েছে।');navigateHome();resetPassengerRequest()}}if(currentUser?.role==='driver'&&ride.status==='pending'&&isDriverOnline)showIncomingRequest();if(currentUser?.role==='driver'&&ride.driverId===currentUser.id&&['accepted','arrived','started'].includes(ride.status))renderActiveRide()}
+function renderActiveRide(){const ride=read(STORE.ride);if(!ride)return;currentRide=ride;const isDriver=currentUser?.role==='driver';$('active-peer-name').textContent=isDriver?ride.passengerName:ride.driverName||'চালক রিকোয়েস্ট গ্রহণ করেছেন';$('active-peer-details').textContent=`${ride.pickup} → ${ride.dropoff}`;$('active-fare').textContent='৳ '+ride.fare;$('ride-status-text').textContent=ride.status==='accepted'?'চালক রাইড গ্রহণ করেছেন':ride.status==='arrived'?'চালক পিকআপে পৌঁছেছেন':ride.status==='started'?'ট্রিপ চলছে':'রাইডের অবস্থা';$('btn-driver-action').classList.toggle('hidden',!isDriver);if(isDriver){rideState=ride.step||0;const labels=['পৌঁছেছি','ট্রিপ শুরু করুন','ট্রিপ শেষ করুন'];$('driver-action-text').textContent=labels[rideState]||labels[0]}const phone=isDriver?ride.passengerPhone:ride.driverPhone;$('active-call-link')?.setAttribute('href',phone?'tel:'+phone:'#');navigate('screen-active-ride')}
+function advanceRide(){const ride=read(STORE.ride);if(!ride||ride.driverId!==currentUser?.id)return;ride.step=(ride.step||0)+1;if(ride.step===1)ride.status='arrived';else if(ride.step===2)ride.status='started';else{completeRide(ride);return}write(STORE.ride,ride);broadcast('ride-updated',ride);renderActiveRide()}
+function completeRide(ride){ride.status='completed';ride.completedAt=new Date().toISOString();write(STORE.ride,ride);const history=read(STORE.rides,[]);history.unshift(ride);write(STORE.rides,history);if(currentUser?.role==='driver'){let remaining=Number(localStorage.getItem(STORE.free));if(!Number.isFinite(remaining))remaining=15;remaining=Math.max(0,remaining-1);localStorage.setItem(STORE.free,String(remaining));updateFreeRideLabel()}broadcast('ride-updated',ride);alert('ট্রিপ সফলভাবে শেষ হয়েছে।');navigateHome();renderHistory()}
+function cancelRide(){const ride=read(STORE.ride);if(!ride||!['pending','accepted','arrived','started'].includes(ride.status)){alert('বাতিল করার মতো কোনো সক্রিয় রাইড নেই।');updatePassengerRideNotice();return}const isPassenger=ride.passengerId===currentUser?.id&&currentUser?.role==='passenger';const isAssignedDriver=ride.driverId===currentUser?.id&&currentUser?.role==='driver';if(!isPassenger&&!isAssignedDriver){alert('শুধু এই রাইডের যাত্রী বা দায়িত্বপ্রাপ্ত চালক রাইডটি বাতিল করতে পারবেন।');return}if(!confirm('রাইডটি বাতিল করতে চান?'))return;ride.status='cancelled';ride.cancelledAt=new Date().toISOString();ride.cancelledBy=currentUser.id;write(STORE.ride,ride);broadcast('ride-updated',ride);$('req-overlay')?.classList.add('hidden');$('incoming-request')?.classList.add('hidden');alert('রাইডটি বাতিল করা হয়েছে।');navigateHome();resetPassengerRequest()}
+function resetPassengerRequest(){updatePassengerRideNotice()}
+function updateFreeRideLabel(){let n=localStorage.getItem(STORE.free);if(n===null){n='15';localStorage.setItem(STORE.free,n)}$('driver-free-count').textContent=`${n}টি ফ্রি রাইড বাকি`;const sub=$('menu-subscription').querySelector('.text-xs');if(sub)sub.textContent=`${n}টি ফ্রি রাইড বাকি`}
+function renderHistory(){const list=$('history-list');const rides=read(STORE.rides,[]).filter(r=>currentUser?.role==='driver'?r.driverId===currentUser.id:r.passengerId===currentUser?.id);if(!rides.length){list.innerHTML='<div class="text-center text-textMuted py-10"><i class="fa-solid fa-route text-4xl mb-3 opacity-50"></i><p>কোনো পূর্ববর্তী ট্রিপ নেই</p></div>';return}list.innerHTML=rides.map(r=>`<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><div class="flex justify-between border-b pb-3 mb-3"><span>${new Date(r.createdAt).toLocaleString('bn-BD')}</span><b>৳ ${Number(r.fare).toLocaleString('bn-BD')}</b></div><p>পিকআপ: ${escapeHTML(r.pickup)}</p><p>গন্তব্য: ${escapeHTML(r.dropoff)}</p><small>অবস্থা: ${r.status==='completed'?'সম্পন্ন':r.status}</small></div>`).join('')}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 </script>
 </body>
 </html>
