@@ -36,7 +36,7 @@
         <button class="btn" onclick="saveProfile()">সেভ করুন</button>
     </div>
 
-    <!-- যাত্রীর ড্যাশবোর্ড -->
+<!-- যাত্রীর ড্যাশবোর্ড -->
     <div id="passenger-dashboard" class="card hidden">
         <h3>কোথায় যাবেন?</h3>
         <select id="pickup">
@@ -57,10 +57,18 @@
             <option value="চৌমাথা">চৌমাথা</option>
             <option value="বাংলা বাজার">বাংলা বাজার</option>
         </select>
+        
+        <!-- নতুন বাহন সিলেক্ট অপশন -->
+        <select id="vehicle">
+            <option value="">কোন বাহনে যাবেন?</option>
+            <option value="Bike">বাইক (Bike)</option>
+            <option value="CNG">সিএনজি (CNG)</option>
+            <option value="Car">গাড়ি (Car)</option>
+        </select>
+
         <input type="number" id="price" placeholder="আপনার ভাড়া প্রস্তাব করুন (টাকা)">
         <button class="btn" onclick="requestRide()">রাইড খুঁজুন</button>
     </div>
-
     <!-- চালকের ড্যাশবোর্ড -->
     <div id="driver-dashboard" class="card hidden">
         <h3>নতুন রাইড রিকোয়েস্ট</h3>
@@ -126,19 +134,21 @@
             else { alert("প্রোফাইল তৈরি হয়েছে!"); checkUser(); }
         }
 
-        async function requestRide() {
+       async function requestRide() {
             const pickup = document.getElementById('pickup').value;
             const dropoff = document.getElementById('dropoff').value;
+            const vehicle = document.getElementById('vehicle').value;
             const price = document.getElementById('price').value;
 
-            if (!pickup || !dropoff || !price) {
-                alert("কোথা থেকে যাবেন, কোথায় যাবেন এবং ভাড়া উল্লেখ করুন!"); return;
+            if (!pickup || !dropoff || !vehicle || !price) {
+                alert("লোকেশন, বাহন এবং ভাড়া উল্লেখ করুন!"); return;
             }
 
             const { error } = await supabaseClient.from('rides').insert([{
                 passenger_id: currentUser.id,
                 pickup_location: pickup,
                 dropoff_location: dropoff,
+                vehicle_type: vehicle,
                 fare: price,
                 status: 'pending'
             }]);
@@ -149,7 +159,6 @@
                 alert("আপনার রাইড রিকোয়েস্ট চালকদের কাছে পাঠানো হয়েছে!");
             }
         }
-
         async function fetchRequests() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
             
