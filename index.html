@@ -37,20 +37,29 @@
     </div>
 
     <!-- যাত্রীর ড্যাশবোর্ড -->
+   <!-- যাত্রীর ড্যাশবোর্ড -->
     <div id="passenger-dashboard" class="card hidden">
         <h3>কোথায় যাবেন?</h3>
-        <input type="text" id="pickup" placeholder="আপনার বর্তমান অবস্থান (যেমন: নথুল্লাবাদ)">
-        <input type="text" id="dropoff" placeholder="গন্তব্যস্থল (যেমন: রূপাতলী)">
+        <select id="pickup">
+            <option value="">কোথা থেকে যাবেন?</option>
+            <option value="নথুল্লাবাদ">নথুল্লাবাদ</option>
+            <option value="রূপাতলী">রূপাতলী</option>
+            <option value="সদর রোড">সদর রোড</option>
+            <option value="লঞ্চ ঘাট">লঞ্চ ঘাট</option>
+            <option value="চৌমাথা">চৌমাথা</option>
+            <option value="বাংলা বাজার">বাংলা বাজার</option>
+        </select>
+        <select id="dropoff">
+            <option value="">গন্তব্যস্থল নির্বাচন করুন</option>
+            <option value="নথুল্লাবাদ">নথুল্লাবাদ</option>
+            <option value="রূপাতলী">রূপাতলী</option>
+            <option value="সদর রোড">সদর রোড</option>
+            <option value="লঞ্চ ঘাট">লঞ্চ ঘাট</option>
+            <option value="চৌমাথা">চৌমাথা</option>
+            <option value="বাংলা বাজার">বাংলা বাজার</option>
+        </select>
         <input type="number" id="price" placeholder="আপনার ভাড়া প্রস্তাব করুন (টাকা)">
         <button class="btn" onclick="requestRide()">রাইড খুঁজুন</button>
-    </div>
-
-    <!-- চালকের ড্যাশবোর্ড -->
-    <div id="driver-dashboard" class="card hidden">
-        <h3>নতুন রাইড রিকোয়েস্ট</h3>
-        <div id="requests-list">
-            <p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>
-        </div>
     </div>
 
   <script>
