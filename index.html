@@ -37,7 +37,6 @@
     </div>
 
     <!-- যাত্রীর ড্যাশবোর্ড -->
-   <!-- যাত্রীর ড্যাশবোর্ড -->
     <div id="passenger-dashboard" class="card hidden">
         <h3>কোথায় যাবেন?</h3>
         <select id="pickup">
@@ -62,7 +61,15 @@
         <button class="btn" onclick="requestRide()">রাইড খুঁজুন</button>
     </div>
 
-  <script>
+    <!-- চালকের ড্যাশবোর্ড -->
+    <div id="driver-dashboard" class="card hidden">
+        <h3>নতুন রাইড রিকোয়েস্ট</h3>
+        <div id="requests-list">
+            <p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>
+        </div>
+    </div>
+
+   <script>
         const supabaseUrl = 'https://bgtauxcgptxddbtbaxmx.supabase.co';
         const supabaseKey = 'sb_publishable_IZXzzBSjZzbFrqxnhhus9g_9myHECV8';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -88,7 +95,7 @@
                         showSection('passenger-dashboard');
                     } else {
                         showSection('driver-dashboard');
-                        fetchRequests(); // চালক হলে রিকোয়েস্ট খুঁজবে
+                        fetchRequests();
                     }
                 } else {
                     showSection('profile-section');
@@ -119,7 +126,6 @@
             else { alert("প্রোফাইল তৈরি হয়েছে!"); checkUser(); }
         }
 
-        // যাত্রীর রাইড রিকোয়েস্ট পাঠানোর ফাংশন
         async function requestRide() {
             const pickup = document.getElementById('pickup').value;
             const dropoff = document.getElementById('dropoff').value;
@@ -144,7 +150,6 @@
             }
         }
 
-        // চালকের স্ক্রিনে রাইড রিকোয়েস্ট দেখানোর ফাংশন
         async function fetchRequests() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
             
