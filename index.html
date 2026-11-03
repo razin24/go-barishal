@@ -10,10 +10,12 @@
     <style>
         body { font-family: sans-serif; background-color: #F4F0FB; color: #1B1330; text-align: center; padding: 20px; margin: 0; }
         .btn { background-color: #3F0F8F; color: white; padding: 15px 20px; border: none; border-radius: 12px; font-size: 18px; width: 100%; margin-bottom: 15px; cursor: pointer; }
+        .btn-online { background-color: #4CAF50; }
+        .btn-offline { background-color: #9e9e9e; }
         .card { background-color: #FFFFFF; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; }
         .hidden { display: none; }
-        #map { height: 250px; width: 100%; margin-bottom: 15px; border-radius: 8px; z-index: 1; }
+        #map { height: 300px; width: 100%; margin-bottom: 15px; border-radius: 8px; z-index: 1; }
         .profile-bar { background-color: #e3e0f3; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: left; }
     </style>
 </head>
@@ -22,73 +24,75 @@
     <h2>Go Barishal</h2>
 
     <div id="user-info-bar" class="profile-bar hidden">
-        <strong>Nam:</strong> <span id="display-name"></span><br>
-        <strong>Phone:</strong> <span id="display-phone"></span><br>
-        <strong>Role:</strong> <span id="display-role"></span>
+        <strong>নাম:</strong> <span id="display-name"></span><br>
+        <strong>ফোন:</strong> <span id="display-phone"></span><br>
+        <strong>রোল:</strong> <span id="display-role"></span>
     </div>
 
     <div id="login-section" class="card hidden">
-        <p>App bebohar korte Google diye login korun</p>
+        <p>অ্যাপ ব্যবহার করতে Google দিয়ে লগইন করুন</p>
         <button class="btn" onclick="loginWithGoogle()">Google Login</button>
     </div>
 
     <div id="profile-section" class="card hidden">
-        <h3>Apnar tothyo din</h3>
-        <input type="text" id="full_name" placeholder="Apnar nam">
-        <input type="text" id="phone" placeholder="Phone number">
+        <h3>আপনার তথ্য দিন</h3>
+        <input type="text" id="full_name" placeholder="আপনার নাম">
+        <input type="text" id="phone" placeholder="ফোন নম্বর">
         <select id="role">
-            <option value="passenger">Ami Jatri</option>
-            <option value="driver">Ami Chalok</option>
+            <option value="passenger">আমি যাত্রী</option>
+            <option value="driver">আমি চালক</option>
         </select>
-        <p><input type="checkbox" id="terms"> Ami shortaboli mene nilam</p>
-        <button class="btn" onclick="saveProfile()">Save korun</button>
+        <p><input type="checkbox" id="terms"> আমি শর্তাবলী মেনে নিলাম</p>
+        <button class="btn" onclick="saveProfile()">সেভ করুন</button>
     </div>
 
     <div id="passenger-dashboard" class="card hidden">
-        <h3>Kothay jaben?</h3>
+        <h3>কোথায় যাবেন?</h3>
+        <p id="location-warning" style="color: red; font-size: 14px;">আপনার লাইভ লোকেশন বের করা হচ্ছে, অপেক্ষা করুন...</p>
         
         <div id="map"></div>
 
         <select id="pickup">
-            <option value="">Kotha theke jaben?</option>
-            <option value="Nathullabad">Nathullabad</option>
-            <option value="Rupatali">Rupatali</option>
-            <option value="Sadar Road">Sadar Road</option>
-            <option value="Launch Ghat">Launch Ghat</option>
-            <option value="Choumatha">Choumatha</option>
-            <option value="Bangla Bazar">Bangla Bazar</option>
+            <option value="">কোথা থেকে যাবেন?</option>
+            <option value="নথুল্লাবাদ">নথুল্লাবাদ</option>
+            <option value="রূপাতলী">রূপাতলী</option>
+            <option value="সদর রোড">সদর রোড</option>
+            <option value="লঞ্চ ঘাট">লঞ্চ ঘাট</option>
+            <option value="চৌমাথা">চৌমাথা</option>
+            <option value="বাংলা বাজার">বাংলা বাজার</option>
         </select>
         <select id="dropoff">
-            <option value="">Gontobbo nirbachon korun</option>
-            <option value="Nathullabad">Nathullabad</option>
-            <option value="Rupatali">Rupatali</option>
-            <option value="Sadar Road">Sadar Road</option>
-            <option value="Launch Ghat">Launch Ghat</option>
-            <option value="Choumatha">Choumatha</option>
-            <option value="Bangla Bazar">Bangla Bazar</option>
+            <option value="">গন্তব্যস্থল নির্বাচন করুন</option>
+            <option value="নথুল্লাবাদ">নথুল্লাবাদ</option>
+            <option value="রূপাতলী">রূপাতলী</option>
+            <option value="সদর রোড">সদর রোড</option>
+            <option value="লঞ্চ ঘাট">লঞ্চ ঘাট</option>
+            <option value="চৌমাথা">চৌমাথা</option>
+            <option value="বাংলা বাজার">বাংলা বাজার</option>
         </select>
         <select id="vehicle">
-            <option value="">Kon bahone jaben?</option>
+            <option value="">কোন বাহনে যাবেন?</option>
             <option value="Bike">Bike</option>
             <option value="CNG">CNG</option>
             <option value="Car">Car</option>
         </select>
-        <input type="number" id="price" placeholder="Bhara prostab korun (Taka)">
-        <button class="btn" onclick="requestRide()">Ride khujun</button>
+        <input type="number" id="price" placeholder="ভাড়া প্রস্তাব করুন (টাকা)">
+        <button class="btn" onclick="requestRide()">রাইড খুঁজুন</button>
     </div>
 
     <div id="driver-dashboard" class="card hidden">
-        <h3>Notun Ride Request</h3>
+        <button id="online-btn" class="btn btn-offline" onclick="toggleOnline()">Offline (অনলাইন হতে ক্লিক করুন)</button>
+        <h3>নতুন রাইড রিকোয়েস্ট</h3>
         <div id="requests-list">
-            <p>Ekhono kono ride request nei...</p>
+            <p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>
         </div>
     </div>
 
     <div id="active-ride-section" class="card hidden">
-        <h3 id="active-ride-title">Choloman Ride</h3>
+        <h3 id="active-ride-title">চলমান রাইড</h3>
         <div id="active-ride-details" style="text-align: left; padding: 10px; background: #f9f9f9; border-radius: 8px;"></div>
-        <button id="finish-btn" class="btn hidden" style="background-color: #d32f2f; margin-top: 15px;" onclick="finishRide()">Ride Shesh Korun</button>
-        <button id="refresh-btn" class="btn hidden" style="background-color: #1976d2; margin-top: 15px;" onclick="checkCurrentRide()">Status Check Korun</button>
+        <button id="finish-btn" class="btn hidden" style="background-color: #d32f2f; margin-top: 15px;" onclick="finishRide()">রাইড শেষ করুন</button>
+        <button id="refresh-btn" class="btn hidden" style="background-color: #1976d2; margin-top: 15px;" onclick="checkCurrentRide()">স্ট্যাটাস চেক করুন</button>
     </div>
 
    <script>
@@ -99,6 +103,11 @@
         let currentUser = null;
         let currentRole = null;
         let activeRideId = null;
+        
+        let userLat = null;
+        let userLng = null;
+        let isOnline = false;
+        let map = null;
         let mapInitialized = false;
 
         async function loginWithGoogle() {
@@ -106,7 +115,7 @@
                 provider: 'google',
                 options: { redirectTo: 'https://razin24.github.io/go-barishal/' }
             });
-            if (error) alert("Login e shomossha hoyeche!");
+            if (error) alert("লগইনে সমস্যা হয়েছে!");
         }
 
         async function checkUser() {
@@ -117,13 +126,12 @@
                 
                 if (profile) {
                     currentRole = profile.role;
-                    
                     document.getElementById('display-name').innerText = profile.full_name;
                     document.getElementById('display-phone').innerText = profile.phone;
-                    document.getElementById('display-role').innerText = profile.role === 'passenger' ? 'Jatri' : 'Chalok';
+                    document.getElementById('display-role').innerText = profile.role === 'passenger' ? 'যাত্রী' : 'চালক';
                     document.getElementById('user-info-bar').classList.remove('hidden');
                     
-                    checkCurrentRide();
+                    askLocationPermission(); // লোকেশন পারমিশন চাইবে
                 } else {
                     showSection('profile-section');
                 }
@@ -132,155 +140,155 @@
             }
         }
 
-        async function saveProfile() {
-            const fullName = document.getElementById('full_name').value;
-            const phone = document.getElementById('phone').value;
-            const role = document.getElementById('role').value;
-            const terms = document.getElementById('terms').checked;
-
-            if (!terms) { alert("Shortabolite tick din!"); return; }
-
-            const { error } = await supabaseClient.from('profiles').insert([{
-                id: currentUser.id,
-                full_name: fullName,
-                email: currentUser.email,
-                phone: phone,
-                role: role,
-                accepted_terms_at: new Date().toISOString()
-            }]);
-
-            if (error) alert("Database error: " + error.message);
-            else { alert("Profile toiri hoyeche!"); checkUser(); }
+        function askLocationPermission() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLat = position.coords.latitude;
+                        userLng = position.coords.longitude;
+                        if (document.getElementById('location-warning')) {
+                            document.getElementById('location-warning').style.display = 'none';
+                        }
+                        checkCurrentRide();
+                    },
+                    (error) => {
+                        alert("দয়া করে লোকেশন (GPS) পারমিশন দিন, না হলে অ্যাপ ঠিকমতো কাজ করবে না!");
+                        checkCurrentRide(); // পারমিশন না দিলেও ড্যাশবোর্ড দেখাবে
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                alert("আপনার ডিভাইস লোকেশন সাপোর্ট করে না!");
+                checkCurrentRide();
+            }
         }
 
         function initMap() {
-            if (!mapInitialized) {
-                const map = L.map('map').setView([22.7010, 90.3535], 13);
+            if (!mapInitialized && userLat && userLng) {
+                map = L.map('map').setView([userLat, userLng], 14);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
                     attribution: '© OpenStreetMap'
                 }).addTo(map);
-                L.marker([22.7010, 90.3535]).addTo(map).bindPopup('Barishal City').openPopup();
+                
+                // যাত্রীর নিজের লোকেশন মার্কার (নীল রঙ)
+                L.marker([userLat, userLng]).addTo(map).bindPopup('আপনার অবস্থান').openPopup();
                 mapInitialized = true;
+                
+                loadOnlineDrivers(); // ম্যাপে চালকদের দেখাবে
             }
         }
 
+        async function loadOnlineDrivers() {
+            const { data, error } = await supabaseClient.from('profiles').select('full_name, current_lat, current_lng').eq('role', 'driver').eq('is_online', true);
+            if (data) {
+                data.forEach(driver => {
+                    if (driver.current_lat && driver.current_lng) {
+                        // চালকের লোকেশন মার্কার
+                        L.marker([driver.current_lat, driver.current_lng]).addTo(map).bindPopup('চালক: ' + driver.full_name);
+                    }
+                });
+            }
+        }
+
+        async function toggleOnline() {
+            if (!userLat || !userLng) {
+                alert("আপনার জিপিএস লোকেশন পাওয়া যায়নি। লোকেশন অন করে পেজ রিলোড দিন!"); return;
+            }
+            
+            isOnline = !isOnline;
+            const btn = document.getElementById('online-btn');
+            
+            if (isOnline) {
+                btn.innerText = "Online (অফলাইন হতে ক্লিক করুন)";
+                btn.classList.replace('btn-offline', 'btn-online');
+            } else {
+                btn.innerText = "Offline (অনলাইন হতে ক্লিক করুন)";
+                btn.classList.replace('btn-online', 'btn-offline');
+            }
+
+            const { error } = await supabaseClient.from('profiles').update({
+                is_online: isOnline,
+                current_lat: userLat,
+                current_lng: userLng
+            }).eq('id', currentUser.id);
+
+            if (error) alert("স্ট্যাটাস আপডেট হয়নি: " + error.message);
+        }
+
+        async function saveProfile() {
+            // ... (আগের মতোই থাকবে)
+            const fullName = document.getElementById('full_name').value;
+            const phone = document.getElementById('phone').value;
+            const role = document.getElementById('role').value;
+            const terms = document.getElementById('terms').checked;
+            if (!terms) { alert("শর্তাবলীতে টিক দিন!"); return; }
+            const { error } = await supabaseClient.from('profiles').insert([{ id: currentUser.id, full_name: fullName, email: currentUser.email, phone: phone, role: role, accepted_terms_at: new Date().toISOString() }]);
+            if (error) alert("ডাটাবেস এরর: " + error.message); else { alert("প্রোফাইল তৈরি হয়েছে!"); checkUser(); }
+        }
+
         async function requestRide() {
+            // ... (আগের মতোই থাকবে)
             const pickup = document.getElementById('pickup').value;
             const dropoff = document.getElementById('dropoff').value;
             const vehicle = document.getElementById('vehicle').value;
             const price = document.getElementById('price').value;
-
-            if (!pickup || !dropoff || !vehicle || !price) {
-                alert("Location, bahon ebong bhara ullekh korun!"); return;
-            }
-
-            const { error } = await supabaseClient.from('rides').insert([{
-                passenger_id: currentUser.id,
-                pickup_location: pickup,
-                dropoff_location: dropoff,
-                vehicle_type: vehicle,
-                fare: price,
-                status: 'pending'
-            }]);
-
-            if (error) {
-                alert("Database error: " + error.message);
-            } else {
-                alert("Ride request pathano hoyeche!");
-                checkCurrentRide();
-            }
+            if (!pickup || !dropoff || !vehicle || !price) { alert("সব তথ্য দিন!"); return; }
+            const { error } = await supabaseClient.from('rides').insert([{ passenger_id: currentUser.id, pickup_location: pickup, dropoff_location: dropoff, vehicle_type: vehicle, fare: price, status: 'pending' }]);
+            if (error) alert("ডাটাবেস এরর: " + error.message); else { alert("রিকোয়েস্ট পাঠানো হয়েছে!"); checkCurrentRide(); }
         }
 
         async function checkCurrentRide() {
             if (currentRole === 'passenger') {
                 const { data } = await supabaseClient.from('rides').select('*').eq('passenger_id', currentUser.id).in('status', ['pending', 'accepted']).order('created_at', { ascending: false }).limit(1);
-                
-                if (data && data.length > 0) {
-                    showActiveRideScreen(data[0]);
-                } else {
-                    showSection('passenger-dashboard');
-                    setTimeout(initMap, 500); 
-                }
+                if (data && data.length > 0) { showActiveRideScreen(data[0]); } 
+                else { showSection('passenger-dashboard'); setTimeout(initMap, 500); }
             } else if (currentRole === 'driver') {
                 const { data } = await supabaseClient.from('rides').select('*').eq('driver_id', currentUser.id).eq('status', 'accepted').order('created_at', { ascending: false }).limit(1);
-                
-                if (data && data.length > 0) {
-                    showActiveRideScreen(data[0]);
-                } else {
-                    showSection('driver-dashboard');
-                    fetchRequests();
-                }
+                if (data && data.length > 0) { showActiveRideScreen(data[0]); } 
+                else { showSection('driver-dashboard'); fetchRequests(); }
             }
         }
 
         function showActiveRideScreen(ride) {
             showSection('active-ride-section');
             activeRideId = ride.id;
-            
-            let statusText = ride.status === 'pending' ? 'Opekkha korun, chalok khonja hocche...' : 'Apnar ride ti accept kora hoyeche!';
+            let statusText = ride.status === 'pending' ? 'অপেক্ষা করুন, চালক খোঁজা হচ্ছে...' : 'আপনার রাইডটি এক্সেপ্ট করা হয়েছে!';
             document.getElementById('active-ride-title').innerText = statusText;
-            
-            document.getElementById('active-ride-details').innerHTML = `
-                <p><b>Location:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p>
-                <p><b>Bahon:</b> ${ride.vehicle_type}</p>
-                <p><b>Bhara:</b> ${ride.fare} Taka</p>
-            `;
-
+            document.getElementById('active-ride-details').innerHTML = `<p><b>লোকেশন:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p><p><b>বাহন:</b> ${ride.vehicle_type}</p><p><b>ভাড়া:</b> ${ride.fare} টাকা</p>`;
             if (currentRole === 'driver') {
                 document.getElementById('finish-btn').classList.remove('hidden');
                 document.getElementById('refresh-btn').classList.add('hidden');
             } else {
                 document.getElementById('finish-btn').classList.add('hidden');
-                if (ride.status === 'pending') {
-                    document.getElementById('refresh-btn').classList.remove('hidden');
-                } else {
-                    document.getElementById('refresh-btn').classList.add('hidden');
-                }
+                if (ride.status === 'pending') document.getElementById('refresh-btn').classList.remove('hidden');
+                else document.getElementById('refresh-btn').classList.add('hidden');
             }
         }
 
         async function fetchRequests() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
-            
             if (data && data.length > 0) {
                 let html = '';
-                data.forEach(ride => {
-                    html += `
-                    <div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left; background:#fff;">
-                        <p><b>Location:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p>
-                        <p><b>Bahon:</b> ${ride.vehicle_type}</p>
-                        <p><b>Bhara:</b> ${ride.fare} Taka</p>
-                        <button class="btn" style="background-color: green; margin-bottom: 0;" onclick="acceptRide('${ride.id}')">Accept Korun</button>
-                    </div>`;
-                });
+                data.forEach(ride => { html += `<div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left; background:#fff;"><p><b>লোকেশন:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p><p><b>বাহন:</b> ${ride.vehicle_type}</p><p><b>ভাড়া:</b> ${ride.fare} টাকা</p><button class="btn" style="background-color: green; margin-bottom: 0;" onclick="acceptRide('${ride.id}')">এক্সেপ্ট করুন</button></div>`; });
                 document.getElementById('requests-list').innerHTML = html;
-            } else {
-                document.getElementById('requests-list').innerHTML = "<p>Ekhono kono ride request nei...</p>";
-            }
+            } else { document.getElementById('requests-list').innerHTML = "<p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>"; }
         }
 
         async function acceptRide(rideId) {
             const { error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_id: currentUser.id }).eq('id', rideId);
-            if (error) alert("Database error: " + error.message);
-            else { checkCurrentRide(); }
+            if (error) alert("ডাটাবেস এরর: " + error.message); else checkCurrentRide();
         }
 
         async function finishRide() {
             if (!activeRideId) return;
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', activeRideId);
-            if (error) alert("Database error: " + error.message);
-            else {
-                alert("Ride shesh hoyeche!");
-                activeRideId = null;
-                checkCurrentRide();
-            }
+            if (error) alert("ডাটাবেস এরর: " + error.message);
+            else { alert("রাইড শেষ হয়েছে!"); activeRideId = null; checkCurrentRide(); }
         }
 
         function showSection(sectionId) {
-            ['login-section', 'profile-section', 'passenger-dashboard', 'driver-dashboard', 'active-ride-section'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
+            ['login-section', 'profile-section', 'passenger-dashboard', 'driver-dashboard', 'active-ride-section'].forEach(id => { document.getElementById(id).classList.add('hidden'); });
             document.getElementById(sectionId).classList.remove('hidden');
         }
 
