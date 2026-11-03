@@ -41,11 +41,14 @@
         // নাম পরিবর্তন করে supabaseClient দেওয়া হয়েছে
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        async function loginWithGoogle() {
+      async function loginWithGoogle() {
             const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
+                options: {
+                    redirectTo: 'https://razin24.github.io/go-barishal/'
+                }
             });
-            if (error) alert("লগইনে সমস্যা হয়েছে!");
+            if (error) alert("লগইনে সমস্যা হয়েছে!");
         }
 
         async function checkUser() {
