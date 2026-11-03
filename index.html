@@ -3,13 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Go Barishal</title>
+    <title>Go Barishal - Ride Sharing</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    
+    <!-- Google Fonts: Inter & Noto Sans Bengali -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -24,590 +31,894 @@
                         success: '#22A55B',
                         warning: '#FFC83D',
                         danger: '#D92D20',
-                        textDark: '#1B1330'
+                        textDark: '#1B1330',
+                        textMuted: '#6B7280'
                     },
                     fontFamily: {
-                        sans: ['Inter', 'Hind Siliguri', 'sans-serif'],
+                        sans: ['Inter', 'Noto Sans Bengali', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-        
-        body { font-family: 'Inter', 'Hind Siliguri', sans-serif; background-color: #F4F0FB; color: #1B1330; margin: 0; overflow-x: hidden; }
-        
-        /* Hide scrollbar for cleaner app look */
-        ::-webkit-scrollbar { display: none; }
-        
-        .screen { display: none; min-height: 100vh; padding-bottom: 80px; }
-        .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        body {
+            background-color: #e5e7eb; /* Darker background for desktop to frame the app */
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .map-container { height: 40vh; width: 100%; z-index: 1; }
+        /* Mobile App Container Simulation */
+        #app-container {
+            width: 100%;
+            max-width: 414px; /* iPhone Max Width */
+            height: 100dvh;
+            max-height: 896px;
+            background-color: #F4F0FB;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 420px) {
+            #app-container {
+                border-radius: 40px;
+                height: 90vh;
+                border: 8px solid #1f2937;
+            }
+        }
+
+        /* Screen Transitions */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            transform: translateY(10px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            background-color: #F4F0FB;
+            z-index: 10;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
         
-        /* Custom Toggle Switch */
+        .screen::-webkit-scrollbar {
+            display: none;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+            z-index: 20;
+        }
+
+        /* Full Screen Map specific screens */
+        .map-screen {
+            padding-bottom: 0;
+            overflow: hidden;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Bottom Sheet Styles */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 24px 20px;
+            padding-bottom: env(safe-area-inset-bottom, 24px); /* For iPhones */
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .screen.active .bottom-sheet {
+            transform: translateY(0);
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 5px;
+            background-color: #e5e7eb;
+            border-radius: 10px;
+            margin: 0 auto 20px auto;
+        }
+
+        /* Custom Toggle Switch for Driver Online/Offline */
         .toggle-checkbox:checked { right: 0; border-color: #3F0F8F; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3F0F8F; }
         
-        /* Mobile App Container Simulation for Desktop viewing */
-        @media (min-width: 640px) {
-            body { display: flex; justify-content: center; align-items: center; background-color: #e0e0e0; min-height: 100vh; padding: 20px;}
-            #app-container { width: 100%; max-width: 414px; height: 896px; background-color: #F4F0FB; border-radius: 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow-y: auto; overflow-x: hidden; position: relative; border: 8px solid #333;}
-            .screen { min-height: 100%; }
+        /* Floating top card */
+        .floating-top-card {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            z-index: 1000;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+        
+        /* Leaflet Fixes */
+        .leaflet-control-container .leaflet-top { top: 80px; } /* Push controls down */
     </style>
 </head>
 <body>
 
-<div id="app-container" class="w-full min-h-screen bg-background relative">
+<div id="app-container">
 
-    <!-- Top App Bar -->
-    <div id="app-header" class="hidden fixed top-0 w-full max-w-[414px] bg-card shadow-sm z-50 px-4 py-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-primary">Go Barishal</h1>
-        <div class="flex items-center gap-2">
-            <span id="role-badge" class="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-full">Passenger</span>
-            <i class="ph ph-user-circle text-2xl text-primary" onclick="navigate('payment-screen')"></i>
+    <!-- 1. SPLASH / LOGIN SCREEN -->
+    <div id="screen-login" class="screen flex flex-col items-center justify-center p-6 bg-white">
+        <div class="w-24 h-24 bg-primary text-white rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/30">
+            <i class="fa-solid fa-car-side text-5xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-primary mb-2">গো বরিশাল</h1>
+        <p class="text-textMuted mb-12 text-center">বরিশালের নিজস্ব রাইড শেয়ারিং অ্যাপ</p>
+        
+        <div class="w-full mt-10">
+            <button onclick="mockGoogleLogin()" class="w-full bg-white border-2 border-gray-100 text-textDark font-semibold py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 active:bg-gray-50 transition">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
+                গুগল দিয়ে লগইন করুন
+            </button>
+        </div>
+        
+        <div id="login-loading" class="hidden mt-6 text-primary flex flex-col items-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+            <p>অপেক্ষা করুন...</p>
         </div>
     </div>
 
-    <!-- 1. LOGIN & PROFILE SCREEN -->
-    <section id="login-screen" class="screen active flex flex-col items-center justify-center p-6 min-h-screen">
-        <div class="w-24 h-24 bg-primary text-white rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-primary/30">
-            <i class="ph-fill ph-car-profile text-5xl"></i>
-        </div>
-        <h1 class="text-3xl font-bold text-primary mb-2">Go Barishal</h1>
-        <p class="text-gray-500 mb-10 text-center">বরিশালের ১ নম্বর রাইড শেয়ারিং অ্যাপ</p>
+    <!-- 2. PROFILE SETUP SCREEN -->
+    <div id="screen-setup" class="screen flex flex-col p-6 bg-white">
+        <h2 class="text-2xl font-bold text-textDark mt-10 mb-2">প্রোফাইল তৈরি করুন</h2>
+        <p class="text-textMuted mb-8">অ্যাপ ব্যবহার শুরু করতে আপনার তথ্য দিন</p>
         
-        <div id="login-step" class="w-full">
-            <button onclick="showProfileSetup()" class="w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-3 mb-6 hover:bg-gray-50 transition">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
-                Login with Google
+        <form id="profile-form" onsubmit="saveProfile(event)" class="flex flex-col gap-5 flex-grow">
+            <div>
+                <label class="block text-sm font-semibold text-textDark mb-1">পুরো নাম</label>
+                <input type="text" id="setup-name" required placeholder="আপনার নাম লিখুন" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-textDark mb-1">মোবাইল নম্বর</label>
+                <input type="tel" id="setup-phone" required placeholder="017XXXXXXXX" class="w-full bg-background border-none rounded-xl px-4 py-4 text-textDark focus:ring-2 focus:ring-primary outline-none transition">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-textDark mb-2">আপনি কি হিসেবে অ্যাপ ব্যবহার করবেন?</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="role" value="passenger" class="peer hidden" checked>
+                        <div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition">
+                            <i class="fa-solid fa-person-walking-luggage text-2xl mb-2 text-textMuted peer-checked:text-primary"></i>
+                            <div class="font-semibold text-textDark">যাত্রী</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="role" value="driver" class="peer hidden">
+                        <div class="border-2 border-gray-200 rounded-xl p-4 text-center peer-checked:border-primary peer-checked:bg-primary/5 transition">
+                            <i class="fa-solid fa-motorcycle text-2xl mb-2 text-textMuted peer-checked:text-primary"></i>
+                            <div class="font-semibold text-textDark">চালক</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-auto pt-6 pb-4">
+                <button type="submit" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">সংরক্ষণ করুন ও শুরু করুন</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 3. PASSENGER DASHBOARD -->
+    <div id="screen-passenger" class="screen map-screen">
+        <div id="map-passenger" class="map-container"></div>
+        
+        <!-- Passenger Bottom Sheet -->
+        <div class="bottom-sheet pb-[90px]"> <!-- Extra padding for bottom nav -->
+            <div class="sheet-handle"></div>
+            <h3 class="text-xl font-bold mb-4">কোথায় যাবেন?</h3>
+            
+            <div class="relative flex items-center mb-3 bg-background rounded-xl p-1 border border-gray-100">
+                <i class="fa-solid fa-circle-dot text-primary ml-3 w-5 text-center"></i>
+                <input type="text" id="pass-pickup" placeholder="পিকআপ লোকেশন" value="নথুল্লাবাদ বাস স্ট্যান্ড" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium">
+            </div>
+            
+            <div class="relative flex items-center mb-4 bg-background rounded-xl p-1 border border-gray-100 focus-within:border-primary transition">
+                <i class="fa-solid fa-location-dot text-danger ml-3 w-5 text-center"></i>
+                <input type="text" id="pass-dropoff" placeholder="গন্তব্য লিখুন (যেমন: সদর রোড)" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-medium">
+            </div>
+
+            <!-- Vehicle Selection -->
+            <div class="flex gap-3 mb-4">
+                <div onclick="selectVehicle('bike')" id="veh-bike" class="flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition">
+                    <i class="fa-solid fa-motorcycle text-3xl text-primary mb-1"></i>
+                    <span class="text-sm font-semibold">বাইক</span>
+                </div>
+                <div onclick="selectVehicle('cng')" id="veh-cng" class="flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition">
+                    <i class="fa-solid fa-car text-3xl text-textMuted mb-1" id="veh-cng-icon"></i>
+                    <span class="text-sm font-semibold text-textMuted" id="veh-cng-text">সিএনজি</span>
+                </div>
+            </div>
+
+            <div class="relative flex items-center mb-5 bg-background rounded-xl p-1 border border-gray-100">
+                <span class="ml-4 font-bold text-textMuted">৳</span>
+                <input type="number" id="pass-fare" placeholder="ভাড়া প্রস্তাব করুন" class="w-full bg-transparent border-none px-3 py-3 outline-none text-textDark font-bold text-lg">
+            </div>
+
+            <button onclick="requestRide()" id="btn-find-ride" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/30 active:scale-[0.98] transition flex justify-center items-center gap-2">
+                <span>রাইড খুঁজুন</span>
             </button>
         </div>
+    </div>
 
-        <div id="profile-step" class="w-full hidden bg-card p-6 rounded-2xl shadow-md">
-            <h3 class="text-xl font-bold mb-4">Profile Setup</h3>
-            <input type="text" id="fullname" placeholder="Full Name" value="John Doe" class="w-full bg-background border border-gray-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-primary">
-            <input type="tel" id="phone" placeholder="Phone Number" value="01712345678" class="w-full bg-background border border-gray-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-primary">
-            
-            <div class="flex bg-background p-1 rounded-xl mb-6">
-                <button id="btn-role-passenger" onclick="selectRole('passenger')" class="flex-1 py-2 rounded-lg bg-primary text-white font-semibold transition">Passenger</button>
-                <button id="btn-role-driver" onclick="selectRole('driver')" class="flex-1 py-2 rounded-lg text-gray-500 font-semibold transition">Driver</button>
-            </div>
-
-            <button onclick="completeLogin()" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-primary/30 hover:bg-primary/90 transition">Complete Setup</button>
-        </div>
-    </section>
-
-    <!-- 2. PASSENGER DASHBOARD -->
-    <section id="passenger-home" class="screen pt-[60px]">
-        <div id="map-passenger" class="map-container relative"></div>
+    <!-- 4. DRIVER DASHBOARD -->
+    <div id="screen-driver" class="screen map-screen">
+        <div id="map-driver" class="map-container"></div>
         
-        <div class="absolute bottom-[80px] w-full px-4 z-10 transition-transform duration-300">
-            <div class="bg-card rounded-2xl p-5 shadow-xl border border-gray-100">
-                <h3 class="text-lg font-bold mb-4">Where to?</h3>
-                
-                <div class="relative flex items-center mb-3">
-                    <i class="ph-fill ph-map-pin text-primary absolute left-3"></i>
-                    <select class="w-full bg-background border-none rounded-xl pl-10 pr-4 py-3 appearance-none focus:ring-2 focus:ring-primary">
-                        <option>Nathullabad</option>
-                        <option>Rupatali</option>
-                        <option>Sadar Road</option>
-                    </select>
+        <!-- Driver Top Control Card -->
+        <div class="floating-top-card bg-white p-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div id="driver-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                <div>
+                    <div id="driver-status-text" class="font-bold text-textDark text-sm">অফলাইন</div>
+                    <div class="text-xs text-textMuted">১৫টি ফ্রি রাইড বাকি</div>
                 </div>
-                
-                <div class="relative flex items-center mb-4">
-                    <i class="ph-fill ph-navigation-arrow text-danger absolute left-3"></i>
-                    <select class="w-full bg-background border-none rounded-xl pl-10 pr-4 py-3 appearance-none focus:ring-2 focus:ring-primary">
-                        <option value="">Choose Destination</option>
-                        <option>Launch Ghat</option>
-                        <option>Bells Park</option>
-                        <option>BM College</option>
-                    </select>
-                </div>
-
-                <div class="flex gap-3 mb-4">
-                    <div class="flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer">
-                        <i class="ph-fill ph-motorcycle text-3xl text-primary mb-1"></i>
-                        <span class="text-sm font-semibold">Bike</span>
-                    </div>
-                    <div class="flex-1 border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:border-primary">
-                        <i class="ph-fill ph-car text-3xl text-gray-500 mb-1"></i>
-                        <span class="text-sm font-semibold text-gray-500">CNG</span>
-                    </div>
-                </div>
-
-                <div class="relative flex items-center mb-4">
-                    <span class="absolute left-4 font-bold text-gray-500">৳</span>
-                    <input type="number" placeholder="Offer Fare" class="w-full bg-background border-none rounded-xl pl-8 pr-4 py-3 focus:ring-2 focus:ring-primary">
-                </div>
-
-                <button onclick="navigate('passenger-offers')" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl shadow-md hover:bg-primary/90 transition">Find Ride</button>
             </div>
-        </div>
-    </section>
-
-    <!-- 3. DRIVER DASHBOARD -->
-    <section id="driver-home" class="screen pt-[60px]">
-        <div class="bg-card px-4 py-3 flex justify-between items-center shadow-sm relative z-20 border-b border-gray-100">
-            <div>
-                <span class="font-bold text-gray-700 block" id="driver-status-text">Offline</span>
-                <span class="text-xs font-semibold text-primary" id="driver-credits-display">15 Free Rides Left</span>
-            </div>
-            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input type="checkbox" name="toggle" id="toggle-online" onchange="toggleDriverStatus()" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 z-10"/>
+            
+            <!-- Tailwind toggle -->
+            <div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" name="toggle" id="toggle-online" onchange="toggleOnlineStatus()" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 z-10"/>
                 <label for="toggle-online" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-300"></label>
             </div>
         </div>
         
-        <div id="map-driver" class="map-container relative h-[calc(100vh-180px)]">
-            <!-- Simulated Incoming Request Popup -->
-            <div id="incoming-request" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-sm bg-card rounded-2xl shadow-2xl p-5 z-[1000] border-2 border-primary/20">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex items-center gap-3">
-                        <img src="https://ui-avatars.com/api/?name=Sarah+J&background=3F0F8F&color=fff" class="w-12 h-12 rounded-full">
-                        <div>
-                            <h4 class="font-bold text-lg">Sarah J.</h4>
-                            <span class="text-sm text-gray-500 flex items-center gap-1"><i class="ph-fill ph-star text-warning"></i> 4.9</span>
-                        </div>
-                    </div>
-                    <div class="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">৳ 60</div>
+        <!-- Driver Bottom Sheet (Searching) -->
+        <div class="bottom-sheet pb-[90px] !translate-y-[120%]" id="driver-searching-sheet">
+            <div class="flex flex-col items-center justify-center py-4">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <i class="fa-solid fa-radar fa-spin text-2xl text-primary"></i>
                 </div>
-                
-                <div class="mb-5 relative pl-6 border-l-2 border-dashed border-gray-300 ml-3 space-y-4">
-                    <div class="relative">
-                        <div class="absolute -left-[30px] top-0.5 w-4 h-4 bg-success rounded-full border-2 border-white"></div>
-                        <p class="text-xs text-gray-500 font-bold uppercase">Pickup</p>
-                        <p class="font-semibold">Nathullabad Bus Stand <span class="text-gray-400 font-normal text-sm">(2 min)</span></p>
-                    </div>
-                    <div class="relative">
-                        <div class="absolute -left-[30px] top-0.5 w-4 h-4 bg-danger rounded-full border-2 border-white"></div>
-                        <p class="text-xs text-gray-500 font-bold uppercase">Dropoff</p>
-                        <p class="font-semibold">Sadar Road <span class="text-gray-400 font-normal text-sm">(15 min)</span></p>
-                    </div>
-                </div>
-
-                <div class="flex gap-2">
-                    <button onclick="acceptRide()" class="flex-2 bg-success text-white font-bold py-3 px-2 rounded-xl shadow-md shadow-success/30 flex-grow">Accept</button>
-                    <button class="flex-1 bg-warning text-textDark font-bold py-3 px-2 rounded-xl shadow-md">Counter</button>
-                    <button onclick="document.getElementById('incoming-request').classList.add('hidden')" class="flex-1 bg-gray-200 text-gray-600 font-bold py-3 px-2 rounded-xl">Skip</button>
-                </div>
+                <h3 class="font-bold text-lg text-textDark">রাইড খোঁজা হচ্ছে...</h3>
+                <p class="text-sm text-textMuted">অনলাইনে থাকুন, রিকোয়েস্ট আসবে।</p>
             </div>
         </div>
-    </section>
 
-    <!-- 5. DRIVER OFFERS (Passenger View) -->
-    <section id="passenger-offers" class="screen pt-[60px] bg-background">
-        <div class="p-4">
-            <h2 class="text-xl font-bold mb-4">Driver Offers (3)</h2>
-            <div class="space-y-4">
-                <!-- Offer Card 1 -->
-                <div class="bg-card p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <img src="https://ui-avatars.com/api/?name=Rahim+M&background=3F0F8F&color=fff" class="w-12 h-12 rounded-full">
-                            <div>
-                                <h4 class="font-bold">Rahim M.</h4>
-                                <span class="text-sm text-gray-500 flex items-center gap-1"><i class="ph-fill ph-star text-warning"></i> 4.8</span>
-                            </div>
-                        </div>
-                        <span class="text-2xl font-bold text-primary">৳ 50</span>
-                    </div>
-                    <div class="flex justify-between items-center border-t border-gray-100 pt-3">
-                        <div class="flex items-center gap-2 text-gray-600">
-                            <i class="ph-fill ph-motorcycle text-xl"></i>
-                            <span class="text-sm font-medium">Bike • 4 min away</span>
-                        </div>
-                        <button onclick="acceptOffer()" class="bg-success text-white px-6 py-2 rounded-lg font-bold shadow-sm hover:bg-green-600 transition">Accept</button>
-                    </div>
-                </div>
-
-                <!-- Offer Card 2 -->
-                <div class="bg-card p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <img src="https://ui-avatars.com/api/?name=Karim+A&background=random" class="w-12 h-12 rounded-full">
-                            <div>
-                                <h4 class="font-bold">Karim A.</h4>
-                                <span class="text-sm text-gray-500 flex items-center gap-1"><i class="ph-fill ph-star text-warning"></i> 5.0</span>
-                            </div>
-                        </div>
-                        <span class="text-2xl font-bold text-primary">৳ 60</span>
-                    </div>
-                    <div class="flex justify-between items-center border-t border-gray-100 pt-3">
-                        <div class="flex items-center gap-2 text-gray-600">
-                            <i class="ph-fill ph-car text-xl"></i>
-                            <span class="text-sm font-medium">CNG • 7 min away</span>
-                        </div>
-                        <button onclick="acceptOffer()" class="bg-success text-white px-6 py-2 rounded-lg font-bold shadow-sm hover:bg-green-600 transition">Accept</button>
-                    </div>
-                </div>
+        <!-- Incoming Request Modal (Absolute center) -->
+        <div id="incoming-request" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-white rounded-2xl shadow-2xl p-5 z-[2000] border border-gray-100 hidden">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                <div class="text-sm font-bold text-textMuted uppercase tracking-wider">নতুন রিকোয়েস্ট</div>
+                <div class="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-lg">৳ <span id="req-fare">৫০</span></div>
             </div>
             
-            <button onclick="navigate('passenger-home')" class="mt-6 w-full text-primary font-bold py-3 px-4 rounded-xl border border-primary hover:bg-primary/5 transition">Cancel Request</button>
-        </div>
-    </section>
+            <div class="relative pl-6 border-l-2 border-dashed border-gray-300 ml-2 space-y-4 mb-6 mt-4">
+                <div class="relative">
+                    <div class="absolute -left-[29px] top-1 w-3 h-3 bg-primary rounded-full ring-4 ring-white"></div>
+                    <p class="text-xs text-textMuted font-bold">পিকআপ (১.২ কিমি)</p>
+                    <p class="font-semibold text-textDark" id="req-pickup">নথুল্লাবাদ বাস স্ট্যান্ড</p>
+                </div>
+                <div class="relative">
+                    <div class="absolute -left-[29px] top-1 w-3 h-3 bg-danger rounded-full ring-4 ring-white"></div>
+                    <p class="text-xs text-textMuted font-bold">গন্তব্য (৩.৫ কিমি)</p>
+                    <p class="font-semibold text-textDark" id="req-dropoff">সদর রোড, বরিশাল</p>
+                </div>
+            </div>
 
-    <!-- 4. ACTIVE RIDE -->
-    <section id="active-ride" class="screen pt-[60px]">
-        <div class="bg-warning/20 px-4 py-2 text-center text-sm font-bold text-warning-dark border-b border-warning/30">
-            Driver is arriving in 4 mins
+            <div class="flex gap-2">
+                <button onclick="acceptRequest()" class="flex-2 bg-success text-white font-bold py-3 px-4 rounded-xl shadow-md active:scale-95 transition flex-grow text-center">গ্রহণ করুন</button>
+                <button onclick="rejectRequest()" class="flex-1 bg-gray-100 text-textDark font-bold py-3 px-4 rounded-xl active:scale-95 transition">বাতিল</button>
+            </div>
         </div>
-        <div id="map-active" class="map-container h-[35vh]"></div>
+        <!-- Overlay for Modal -->
+        <div id="req-overlay" class="absolute inset-0 bg-black/40 z-[1500] hidden"></div>
+    </div>
+
+    <!-- 5. ACTIVE RIDE SCREEN -->
+    <div id="screen-active-ride" class="screen map-screen">
+        <div id="map-active" class="map-container"></div>
         
-        <div class="p-4 bg-card rounded-t-3xl -mt-5 relative z-20 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] min-h-[50vh]">
-            <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
+        <!-- Top Status Banner -->
+        <div class="absolute top-0 left-0 w-full bg-warning text-textDark font-bold text-center py-3 z-[1000] shadow-md flex items-center justify-center gap-2 pt-safe" id="ride-status-banner">
+            <i class="fa-solid fa-clock"></i> <span id="ride-status-text">চালক আপনার দিকে আসছেন (৩ মিনিট)</span>
+        </div>
+        
+        <!-- Active Ride Bottom Sheet -->
+        <div class="bottom-sheet pb-6 !translate-y-0 shadow-[0_-10px_25px_rgba(0,0,0,0.15)] z-[1000]">
+            <div class="sheet-handle"></div>
             
-            <div class="flex justify-between items-center mb-6">
+            <!-- User Info Row -->
+            <div class="flex justify-between items-center mb-5">
                 <div class="flex items-center gap-4">
                     <div class="relative">
-                        <img src="https://ui-avatars.com/api/?name=Driver&background=3F0F8F&color=fff" class="w-14 h-14 rounded-full border-2 border-white shadow-sm">
-                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
-                            <i class="ph-fill ph-check-circle text-primary text-sm"></i>
+                        <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-xl text-gray-500 overflow-hidden border-2 border-white shadow-sm">
+                            <i class="fa-solid fa-user"></i>
                         </div>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg">Rahim M.</h3>
-                        <p class="text-gray-500 text-sm">Honda CB Hornet • <span class="font-bold text-textDark">Vola 11-2233</span></p>
+                        <h3 class="font-bold text-lg text-textDark" id="active-peer-name">নাম লোড হচ্ছে...</h3>
+                        <p class="text-textMuted text-sm" id="active-peer-details">হোন্ডা সিবি হর্নেট • ভোলা ১১-২২৩৩</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <p class="font-bold text-xl text-primary">৳ 50</p>
-                    <p class="text-sm text-gray-500">Cash</p>
+                    <p class="font-bold text-2xl text-primary" id="active-fare">৳ ৫০</p>
+                    <p class="text-xs font-semibold text-textMuted bg-gray-100 px-2 py-1 rounded mt-1 inline-block">ক্যাশ</p>
                 </div>
             </div>
 
-            <div class="flex gap-3 mb-6 border-b border-gray-100 pb-6" id="active-ride-controls">
-                <!-- Passenger View Controls -->
-                <a href="tel:01700000000" id="btn-call" class="flex-1 bg-primary/10 text-primary font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition hover:bg-primary/20">
-                    <i class="ph-fill ph-phone-call text-xl"></i> Call
+            <!-- Action Buttons Row 1 -->
+            <div class="flex gap-3 mb-4">
+                <a href="tel:01700000000" class="flex-1 bg-primary/10 text-primary font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:bg-primary/20 transition">
+                    <i class="fa-solid fa-phone"></i> কল করুন
                 </a>
-                <button id="btn-passenger-finish" onclick="navigate('post-review')" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition hover:bg-gray-200">
-                    <i class="ph-fill ph-check-square-offset text-xl"></i> Finish
-                </button>
                 
-                <!-- Driver View Controls (Hidden Initially) -->
-                <button id="btn-driver-action" onclick="advanceRideState()" class="hidden flex-1 bg-success text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition hover:bg-green-600 shadow-md">
-                    <i class="ph-fill ph-navigation-arrow text-xl"></i> <span>Arrived</span>
+                <!-- Driver Action Button (Hidden for Passenger) -->
+                <button id="btn-driver-action" onclick="advanceRide()" class="hidden flex-2 bg-success text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-success/30 transition flex-grow">
+                    <i class="fa-solid fa-location-arrow"></i> <span id="driver-action-text">পৌঁছেছি</span>
                 </button>
             </div>
 
             <!-- Emergency Button -->
-            <a href="tel:999" class="w-full bg-danger/10 text-danger border border-danger/20 font-bold py-3 px-4 rounded-xl shadow-sm flex items-center justify-center gap-2 mb-4">
-                <i class="ph-fill ph-warning-circle text-xl"></i> 999 Emergency Support
+            <a href="tel:999" class="w-full bg-danger/10 text-danger border border-danger/20 font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 active:bg-danger/20 transition mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i> 999 - জরুরি সাহায্য
             </a>
             
-             <button onclick="navigate(currentRole === 'passenger' ? 'passenger-home' : 'driver-home')" class="w-full text-gray-500 font-semibold py-3 px-4">Cancel Ride</button>
-        </div>
-    </section>
-
-    <!-- 6. POST-RIDE REVIEW -->
-    <section id="post-review" class="screen pt-[60px] bg-card p-6 text-center">
-        <h2 class="text-2xl font-bold mb-2 mt-4">Ride Completed</h2>
-        <p class="text-gray-500 mb-8">Please rate your experience with Rahim M.</p>
-        
-        <div class="flex justify-center gap-2 mb-8 text-4xl text-gray-300">
-            <i class="ph-fill ph-star cursor-pointer hover:text-warning text-warning"></i>
-            <i class="ph-fill ph-star cursor-pointer hover:text-warning text-warning"></i>
-            <i class="ph-fill ph-star cursor-pointer hover:text-warning text-warning"></i>
-            <i class="ph-fill ph-star cursor-pointer hover:text-warning text-warning"></i>
-            <i class="ph-fill ph-star cursor-pointer hover:text-warning"></i>
-        </div>
-
-        <div class="space-y-4 mb-8 text-left max-w-sm mx-auto">
-            <div class="flex justify-between items-center p-3 bg-background rounded-xl">
-                <span class="font-medium flex items-center gap-2"><i class="ph ph-shield-check text-primary text-xl"></i> Felt Safe?</span>
-                <input type="checkbox" checked class="w-5 h-5 accent-primary">
+            <div class="text-center">
+                <button onclick="cancelRide()" class="text-sm font-semibold text-textMuted py-2 px-4 rounded active:bg-gray-100 transition">রাইড বাতিল করুন</button>
             </div>
-            <div class="flex justify-between items-center p-3 bg-background rounded-xl">
-                <span class="font-medium flex items-center gap-2"><i class="ph ph-broom text-primary text-xl"></i> Vehicle Clean?</span>
-                <input type="checkbox" checked class="w-5 h-5 accent-primary">
-            </div>
-        </div>
-
-        <textarea placeholder="Optional: Add comments..." class="w-full bg-background border border-gray-200 rounded-xl px-4 py-3 mb-8 h-24 focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
-
-        <button onclick="navigate('passenger-home')" class="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-md hover:bg-primary/90 transition">Submit Review</button>
-    </section>
-
-    <!-- 7. DRIVER PAYMENT / SUBSCRIPTION -->
-    <section id="payment-screen" class="screen pt-[60px] p-4 bg-background">
-        <h2 class="text-2xl font-bold mb-6">Subscription</h2>
-        
-        <div class="bg-gradient-to-br from-primary to-purple-600 rounded-2xl p-6 text-white shadow-lg mb-6 relative overflow-hidden">
-            <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-            <h3 class="text-3xl font-bold mb-2"><span id="payment-credits-count">0</span> <span class="text-lg font-normal opacity-80">Free Rides Left</span></h3>
-            <p class="text-sm opacity-90">Your trial has ended. To continue receiving ride requests, please pay your subscription.</p>
-        </div>
-
-        <div class="bg-card rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
-            <h4 class="font-bold mb-3 text-lg">How to Pay:</h4>
-            <p class="text-gray-600 mb-4 text-sm leading-relaxed">
-                Send <strong>৳ 100</strong> via bKash to <span class="font-bold text-primary">017-0000-0000</span> (Personal). Then enter the TrxID below to verify.
-            </p>
-            <input type="text" placeholder="Enter bKash TrxID" class="w-full bg-background border border-gray-200 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-primary uppercase">
-            <button onclick="alert('Payment submitted for approval!'); navigate('driver-home')" class="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-md hover:bg-primary/90 transition">Submit Payment</button>
-        </div>
-        
-        <button onclick="navigate('login-screen')" class="w-full text-danger font-bold py-3 rounded-xl border border-danger/20 hover:bg-danger/5 transition">Log Out</button>
-    </section>
-
-    <!-- 8. TRIP HISTORY -->
-    <section id="history-screen" class="screen pt-[60px] p-4 bg-background">
-        <h2 class="text-2xl font-bold mb-6">Trip History</h2>
-        
-        <div class="space-y-4">
-            <!-- History Card 1 -->
-            <div class="bg-card p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-3">
-                    <span class="text-sm font-bold text-gray-500">Oct 26, 2026 • 2:30 PM</span>
-                    <span class="font-bold text-lg text-primary">৳ 50</span>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                        <i class="ph-fill ph-map-pin text-gray-400"></i>
-                        <span class="text-sm text-gray-700">Nathullabad</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="ph-fill ph-navigation-arrow text-gray-400"></i>
-                        <span class="text-sm text-gray-700">Sadar Road</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- History Card 2 -->
-            <div class="bg-card p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-3">
-                    <span class="text-sm font-bold text-gray-500">Oct 25, 2026 • 10:15 AM</span>
-                    <span class="font-bold text-lg text-primary">৳ 120</span>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                        <i class="ph-fill ph-map-pin text-gray-400"></i>
-                        <span class="text-sm text-gray-700">Rupatali</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="ph-fill ph-navigation-arrow text-gray-400"></i>
-                        <span class="text-sm text-gray-700">Launch Ghat</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Bottom Navigation Bar -->
-    <div id="bottom-nav" class="hidden fixed bottom-0 w-full max-w-[414px] bg-card shadow-[0_-5px_15px_rgba(0,0,0,0.05)] border-t border-gray-100 flex justify-around items-center py-3 z-50 rounded-b-[40px] sm:rounded-none pb-8 sm:pb-3">
-        <div onclick="navigateHome()" class="flex flex-col items-center gap-1 cursor-pointer text-primary">
-            <i class="ph-fill ph-house text-2xl"></i>
-            <span class="text-[10px] font-semibold">Home</span>
-        </div>
-        <div onclick="navigate('history-screen')" class="flex flex-col items-center gap-1 cursor-pointer text-gray-400 hover:text-primary transition">
-            <i class="ph-fill ph-clock-counter-clockwise text-2xl"></i>
-            <span class="text-[10px] font-semibold">History</span>
-        </div>
-        <div onclick="navigate('payment-screen')" class="flex flex-col items-center gap-1 cursor-pointer text-gray-400 hover:text-primary transition">
-            <i class="ph-fill ph-user text-2xl"></i>
-            <span class="text-[10px] font-semibold">Profile</span>
         </div>
     </div>
+
+    <!-- 6. HISTORY SCREEN -->
+    <div id="screen-history" class="screen bg-background">
+        <div class="bg-white px-6 pt-10 pb-4 shadow-sm sticky top-0 z-10">
+            <h2 class="text-2xl font-bold text-textDark">ট্রিপ হিস্ট্রি</h2>
+        </div>
+        
+        <div class="p-4 space-y-4" id="history-list">
+            <!-- Populated by JS -->
+            <div class="text-center text-textMuted py-10">
+                <i class="fa-solid fa-route text-4xl mb-3 opacity-50"></i>
+                <p>কোনো পূর্ববর্তী ট্রিপ নেই</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. PROFILE SCREEN -->
+    <div id="screen-profile" class="screen bg-background">
+        <div class="bg-white px-6 pt-10 pb-6 shadow-sm flex flex-col items-center">
+            <div class="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center text-4xl text-primary mb-4 border-4 border-white shadow-sm relative">
+                <i class="fa-solid fa-user"></i>
+                <div class="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow">
+                    <div class="bg-primary w-6 h-6 rounded-full flex items-center justify-center text-white text-xs">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-textDark" id="profile-display-name">নাম</h2>
+            <p class="text-textMuted mb-2" id="profile-display-phone">017XXXXXXXX</p>
+            <div class="bg-gray-100 text-textDark px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-circle text-[8px] text-success"></i> <span id="profile-display-role">যাত্রী</span>
+            </div>
+        </div>
+        
+        <div class="p-4 mt-2">
+            <div class="bg-white rounded-2xl p-2 shadow-sm mb-4">
+                <div class="flex items-center gap-4 p-3 active:bg-gray-50 transition rounded-xl cursor-pointer" onclick="editProfile()">
+                    <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </div>
+                    <div class="flex-grow font-semibold text-textDark">প্রোফাইল আপডেট করুন</div>
+                    <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                </div>
+                
+                <div class="h-[1px] bg-gray-100 mx-4"></div>
+                
+                <div class="flex items-center gap-4 p-3 active:bg-gray-50 transition rounded-xl cursor-pointer" id="menu-subscription" style="display: none;">
+                    <div class="w-10 h-10 bg-warning/20 rounded-full flex items-center justify-center text-warning">
+                        <i class="fa-solid fa-crown"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="font-semibold text-textDark">প্যাকেজ ও পেমেন্ট</div>
+                        <div class="text-xs text-textMuted">১৫ রাইড বাকি</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300"></i>
+                </div>
+            </div>
+            
+            <button onclick="logout()" class="w-full bg-white text-danger font-bold py-4 rounded-2xl shadow-sm border border-danger/10 active:bg-red-50 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> লগ আউট করুন
+            </button>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav id="bottom-nav" class="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center pt-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)] z-[500] hidden pb-[calc(env(safe-area-inset-bottom,0px)+12px)] transition-transform">
+        <div onclick="navigateHome()" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16" data-target="home">
+            <i class="fa-solid fa-compass text-xl text-primary transition-colors"></i>
+            <span class="text-[10px] font-bold text-primary transition-colors">হোম</span>
+        </div>
+        <div onclick="navigate('screen-history')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-history">
+            <i class="fa-solid fa-clock-rotate-left text-xl transition-colors"></i>
+            <span class="text-[10px] font-semibold transition-colors">হিসট্রি</span>
+        </div>
+        <div onclick="navigate('screen-profile')" class="nav-item flex flex-col items-center gap-1 cursor-pointer w-16 text-textMuted" data-target="screen-profile">
+            <i class="fa-regular fa-user text-xl transition-colors"></i>
+            <span class="text-[10px] font-semibold transition-colors">প্রোফাইল</span>
+        </div>
+    </nav>
 
 </div>
 
 <script>
-    let currentRole = 'passenger';
+    /** --- STATE MANAGEMENT --- **/
+    let currentUser = null;
     let maps = {};
-    let freeRides = 15;
-    let rideState = 0; // 0: accepted, 1: arrived, 2: started
+    let selectedVehicle = 'bike';
+    let rideState = 0; // Driver ride states: 0=Accepted, 1=Arrived, 2=Started
+    let isDriverOnline = false;
 
-    // Utility: Navigation
-    function navigate(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
-        
-        // Show/Hide Header and Footer based on screen
-        const header = document.getElementById('app-header');
-        const footer = document.getElementById('bottom-nav');
-        
-        if(screenId === 'login-screen') {
-            header.classList.add('hidden');
-            footer.classList.add('hidden');
+    // Initialize App
+    document.addEventListener("DOMContentLoaded", () => {
+        checkAuth();
+    });
+
+    /** --- AUTHENTICATION & PROFILE --- **/
+    function checkAuth() {
+        const storedUser = localStorage.getItem('gb_user');
+        if (storedUser) {
+            currentUser = JSON.parse(storedUser);
+            setupProfileData();
+            navigateHome();
         } else {
-            header.classList.remove('hidden');
-            footer.classList.remove('hidden');
+            navigate('screen-login');
+        }
+    }
+
+    function mockGoogleLogin() {
+        const btn = document.querySelector('#screen-login button');
+        const loader = document.getElementById('login-loading');
+        
+        btn.classList.add('hidden');
+        loader.classList.remove('hidden');
+        
+        // Simulate network delay
+        setTimeout(() => {
+            btn.classList.remove('hidden');
+            loader.classList.add('hidden');
             
-            // Re-render map to fix sizing issues when unhidden
-            setTimeout(() => {
-                if(screenId === 'passenger-home' && maps['passenger']) maps['passenger'].invalidateSize();
-                if(screenId === 'driver-home' && maps['driver']) maps['driver'].invalidateSize();
-                if(screenId === 'active-ride' && maps['active']) maps['active'].invalidateSize();
-            }, 100);
-        }
+            // Check if profile exists, else go to setup
+            if (currentUser) {
+                navigateHome();
+            } else {
+                // Clear form just in case
+                document.getElementById('setup-name').value = '';
+                document.getElementById('setup-phone').value = '';
+                navigate('screen-setup');
+            }
+        }, 1200);
     }
 
-    function navigateHome() {
-        if(currentRole === 'passenger') navigate('passenger-home');
-        else navigate('driver-home');
-    }
-
-    // Login logic
-    function showProfileSetup() {
-        document.getElementById('login-step').classList.add('hidden');
-        document.getElementById('profile-step').classList.remove('hidden');
-    }
-
-    function selectRole(role) {
-        currentRole = role;
-        const passBtn = document.getElementById('btn-role-passenger');
-        const driveBtn = document.getElementById('btn-role-driver');
+    function saveProfile(e) {
+        e.preventDefault();
         
-        if (role === 'passenger') {
-            passBtn.className = 'flex-1 py-2 rounded-lg bg-primary text-white font-semibold transition';
-            driveBtn.className = 'flex-1 py-2 rounded-lg text-gray-500 font-semibold transition hover:bg-gray-100';
-            document.getElementById('role-badge').innerText = 'Passenger';
-        } else {
-            driveBtn.className = 'flex-1 py-2 rounded-lg bg-primary text-white font-semibold transition';
-            passBtn.className = 'flex-1 py-2 rounded-lg text-gray-500 font-semibold transition hover:bg-gray-100';
-            document.getElementById('role-badge').innerText = 'Driver';
-        }
-    }
-
-    function completeLogin() {
-        initMaps();
-        navigateHome();
-        updateCreditsDisplay();
-    }
-
-    function updateCreditsDisplay() {
-        if(document.getElementById('driver-credits-display')) {
-            document.getElementById('driver-credits-display').innerText = freeRides + ' Free Rides Left';
-        }
-        if(document.getElementById('payment-credits-count')) {
-            document.getElementById('payment-credits-count').innerText = freeRides;
-        }
-    }
-
-    // --- PASSENGER LOGIC ---
-    function acceptOffer() {
-        setupActiveRide('passenger');
-        navigate('active-ride');
-    }
-
-    // --- DRIVER LOGIC ---
-    function acceptRide() {
-        if (freeRides <= 0) {
-            navigate('payment-screen');
+        const name = document.getElementById('setup-name').value.trim();
+        const phone = document.getElementById('setup-phone').value.trim();
+        const role = document.querySelector('input[name="role"]:checked').value;
+        
+        if (!name || !phone) {
+            alert('অনুগ্রহ করে নাম এবং মোবাইল নম্বর দিন।');
             return;
         }
-        document.getElementById('incoming-request').classList.add('hidden');
-        setupActiveRide('driver');
-        navigate('active-ride');
+        
+        currentUser = {
+            id: 'USER_' + Math.random().toString(36).substr(2, 9),
+            name: name,
+            phone: phone,
+            role: role,
+            joinedAt: new Date().toISOString()
+        };
+        
+        localStorage.setItem('gb_user', JSON.stringify(currentUser));
+        setupProfileData();
+        navigateHome();
     }
-
-    function setupActiveRide(role) {
-        rideState = 0;
-        const driverActionBtn = document.getElementById('btn-driver-action');
-        const passengerFinishBtn = document.getElementById('btn-passenger-finish');
+    
+    function setupProfileData() {
+        if (!currentUser) return;
         
-        // Reset button colors in case they were changed previously
-        driverActionBtn.className = "flex-1 bg-success text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition hover:bg-green-600 shadow-md";
+        // Populate Profile Screen
+        document.getElementById('profile-display-name').innerText = currentUser.name;
+        document.getElementById('profile-display-phone').innerText = currentUser.phone;
+        document.getElementById('profile-display-role').innerText = currentUser.role === 'passenger' ? 'যাত্রী' : 'চালক';
         
-        if (role === 'driver') {
-            driverActionBtn.classList.remove('hidden');
-            driverActionBtn.innerHTML = '<i class="ph-fill ph-navigation-arrow text-xl"></i> <span>Arrived</span>';
-            passengerFinishBtn.classList.add('hidden');
+        // Populate Driver specific menu
+        if (currentUser.role === 'driver') {
+            document.getElementById('menu-subscription').style.display = 'flex';
         } else {
-            driverActionBtn.classList.add('hidden');
-            passengerFinishBtn.classList.remove('hidden');
+            document.getElementById('menu-subscription').style.display = 'none';
         }
     }
 
-    function advanceRideState() {
-        const btn = document.getElementById('btn-driver-action');
-        if (rideState === 0) {
-            rideState = 1;
-            btn.innerHTML = '<i class="ph-fill ph-play-circle text-xl"></i> <span>Start Trip</span>';
-            btn.classList.replace('bg-success', 'bg-warning');
-            btn.classList.replace('hover:bg-green-600', 'hover:bg-yellow-500');
-        } else if (rideState === 1) {
-            rideState = 2;
-            btn.innerHTML = '<i class="ph-fill ph-stop-circle text-xl"></i> <span>Finish Trip</span>';
-            btn.classList.replace('bg-warning', 'bg-danger');
-            btn.classList.replace('hover:bg-yellow-500', 'hover:bg-red-600');
-        } else if (rideState === 2) {
-            // Deduct a free ride upon finishing trip
-            if(freeRides > 0) freeRides--;
-            updateCreditsDisplay();
+    function editProfile() {
+        if (!currentUser) return;
+        document.getElementById('setup-name').value = currentUser.name;
+        document.getElementById('setup-phone').value = currentUser.phone;
+        document.querySelector(`input[name="role"][value="${currentUser.role}"]`).checked = true;
+        navigate('screen-setup');
+    }
+
+    function logout() {
+        if (confirm('আপনি কি লগ আউট করতে চান?')) {
+            localStorage.removeItem('gb_user');
+            currentUser = null;
             
-            alert('Ride Finished! Collected ৳ 50 Cash.');
+            // Clear inputs
+            document.getElementById('setup-name').value = '';
+            document.getElementById('setup-phone').value = '';
             
-            if (freeRides <= 0) {
-                document.getElementById('toggle-online').checked = false; // Turn offline
-                navigate('payment-screen');
+            // Cleanup maps
+            Object.keys(maps).forEach(key => {
+                if (maps[key]) {
+                    maps[key].remove();
+                    maps[key] = null;
+                }
+            });
+            
+            navigate('screen-login');
+        }
+    }
+
+    /** --- NAVIGATION --- **/
+    function navigateHome() {
+        if (!currentUser) return navigate('screen-login');
+        const target = currentUser.role === 'passenger' ? 'screen-passenger' : 'screen-driver';
+        navigate(target);
+        updateNavUI('home');
+    }
+
+    function navigate(screenId) {
+        // Hide all screens
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+        });
+        
+        // Show target screen
+        const targetScreen = document.getElementById(screenId);
+        if(targetScreen) {
+            targetScreen.classList.add('active');
+            
+            // Manage Bottom Nav visibility
+            const navScreens = ['screen-passenger', 'screen-driver', 'screen-history', 'screen-profile'];
+            const bottomNav = document.getElementById('bottom-nav');
+            
+            if (navScreens.includes(screenId)) {
+                bottomNav.classList.remove('hidden');
+                setTimeout(() => bottomNav.classList.remove('translate-y-full'), 50);
+                
+                // Update active tab logic if needed
+                if(screenId !== 'screen-passenger' && screenId !== 'screen-driver') {
+                    updateNavUI(screenId);
+                }
             } else {
-                navigate('driver-home');
+                bottomNav.classList.add('translate-y-full');
+                setTimeout(() => bottomNav.classList.add('hidden'), 300);
+            }
+            
+            // Initialize/Invalidate Maps
+            if (screenId === 'screen-passenger') {
+                initMap('map-passenger');
+            } else if (screenId === 'screen-driver') {
+                initMap('map-driver');
+            } else if (screenId === 'screen-active-ride') {
+                initMap('map-active');
+            }
+        }
+    }
+    
+    function updateNavUI(targetId) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            const icon = item.querySelector('i');
+            const text = item.querySelector('span');
+            
+            if (item.getAttribute('data-target') === targetId || 
+               (targetId === 'home' && item.getAttribute('data-target') === 'home')) {
+                // Active
+                icon.classList.remove('text-textMuted', 'fa-regular');
+                icon.classList.add('text-primary', 'fa-solid');
+                text.classList.remove('text-textMuted');
+                text.classList.add('text-primary');
+            } else {
+                // Inactive
+                icon.classList.remove('text-primary', 'fa-solid');
+                icon.classList.add('text-textMuted', 'fa-regular');
+                text.classList.remove('text-primary');
+                text.classList.add('text-textMuted');
+            }
+        });
+    }
+
+    /** --- MAP INITIALIZATION --- **/
+    const barishalCenter = [22.7010, 90.3535]; // Barishal coordinate
+
+    function initMap(containerId) {
+        // Delay slightly to allow CSS transition to finish before initializing
+        setTimeout(() => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (!maps[containerId]) {
+                // Custom Light theme map tiles (CartoDB Positron)
+                maps[containerId] = L.map(containerId, {
+                    zoomControl: false, 
+                    attributionControl: false
+                }).setView(barishalCenter, 14);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(maps[containerId]);
+
+                // Add markers based on screen
+                if(containerId === 'map-passenger') {
+                    addMarker(maps[containerId], barishalCenter, '#3F0F8F', 'fa-location-crosshairs');
+                } else if (containerId === 'map-driver') {
+                    // Driver location dot
+                    L.circleMarker(barishalCenter, {
+                        color: '#FFFFFF',
+                        fillColor: '#3F0F8F',
+                        fillOpacity: 1,
+                        radius: 8,
+                        weight: 3
+                    }).addTo(maps[containerId]);
+                } else if (containerId === 'map-active') {
+                    addMarker(maps[containerId], barishalCenter, '#3F0F8F', 'fa-circle-dot'); // Pickup
+                    addMarker(maps[containerId], [22.7150, 90.3600], '#D92D20', 'fa-location-dot'); // Drop
+                    
+                    // Fit bounds to show both
+                    const bounds = L.latLngBounds([barishalCenter, [22.7150, 90.3600]]);
+                    maps[containerId].fitBounds(bounds, { padding: [50, 50], paddingTopLeft: [20, 100], paddingBottomRight: [20, 280] });
+                }
+            } else {
+                maps[containerId].invalidateSize();
+            }
+        }, 300);
+    }
+    
+    function addMarker(map, latlng, color, iconClass) {
+        const customIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.3);"><i class="fa-solid ${iconClass} text-sm"></i></div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        L.marker(latlng, {icon: customIcon}).addTo(map);
+    }
+
+    /** --- PASSENGER LOGIC --- **/
+    function selectVehicle(type) {
+        selectedVehicle = type;
+        const bike = document.getElementById('veh-bike');
+        const cng = document.getElementById('veh-cng');
+        const cngIcon = document.getElementById('veh-cng-icon');
+        const cngText = document.getElementById('veh-cng-text');
+        
+        if (type === 'bike') {
+            bike.className = 'flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
+            bike.querySelector('i').classList.replace('text-textMuted', 'text-primary');
+            
+            cng.className = 'flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
+            cngIcon.classList.replace('text-primary', 'text-textMuted');
+            cngText.classList.replace('text-primary', 'text-textMuted');
+        } else {
+            cng.className = 'flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
+            cngIcon.classList.replace('text-textMuted', 'text-primary');
+            cngText.classList.replace('text-textMuted', 'text-primary');
+            
+            bike.className = 'flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
+            bike.querySelector('i').classList.replace('text-primary', 'text-textMuted');
+        }
+    }
+
+    function requestRide() {
+        const dropoff = document.getElementById('pass-dropoff').value.trim();
+        const fare = document.getElementById('pass-fare').value.trim();
+        const btn = document.getElementById('btn-find-ride');
+        
+        if (!dropoff) {
+            alert('অনুগ্রহ করে গন্তব্য লিখুন');
+            return;
+        }
+        if (!fare || parseInt(fare) < 20) {
+            alert('সঠিক ভাড়া প্রস্তাব করুন (নূন্যতম ২০ টাকা)');
+            return;
+        }
+        
+        // Simulating Ride Finding state
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> চালক খোঁজা হচ্ছে...';
+        btn.disabled = true;
+        btn.classList.add('opacity-80');
+        
+        setTimeout(() => {
+            // Mock driver found
+            setupActiveRideUI('passenger', { name: 'রহিম মিয়া', details: 'হোন্ডা সিবি হর্নেট • ভোলা ১১-২২৩৩', fare: fare });
+            navigate('screen-active-ride');
+            
+            // Reset button
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            btn.classList.remove('opacity-80');
+            document.getElementById('pass-dropoff').value = '';
+            document.getElementById('pass-fare').value = '';
+        }, 2000);
+    }
+
+    /** --- DRIVER LOGIC --- **/
+    function toggleOnlineStatus() {
+        isDriverOnline = document.getElementById('toggle-online').checked;
+        const statusText = document.getElementById('driver-status-text');
+        const indicator = document.getElementById('driver-status-indicator');
+        const sheet = document.getElementById('driver-searching-sheet');
+        
+        if(isDriverOnline) {
+            statusText.innerText = 'অনলাইন';
+            statusText.classList.replace('text-textDark', 'text-success');
+            indicator.classList.replace('bg-gray-400', 'bg-success');
+            sheet.classList.remove('!translate-y-[120%]');
+            
+            // Mock incoming request after 3 seconds
+            setTimeout(() => {
+                if (isDriverOnline && !document.getElementById('screen-active-ride').classList.contains('active')) {
+                    showIncomingRequest();
+                }
+            }, 3000);
+        } else {
+            statusText.innerText = 'অফলাইন';
+            statusText.classList.replace('text-success', 'text-textDark');
+            indicator.classList.replace('bg-success', 'bg-gray-400');
+            sheet.classList.add('!translate-y-[120%]');
+            document.getElementById('incoming-request').classList.add('hidden');
+            document.getElementById('req-overlay').classList.add('hidden');
+        }
+    }
+
+    function showIncomingRequest() {
+        document.getElementById('req-overlay').classList.remove('hidden');
+        document.getElementById('incoming-request').classList.remove('hidden');
+        // Randomize fare slightly for realism
+        const randomFare = Math.floor(Math.random() * 40) + 40;
+        document.getElementById('req-fare').innerText = randomFare;
+    }
+
+    function rejectRequest() {
+        document.getElementById('req-overlay').classList.add('hidden');
+        document.getElementById('incoming-request').classList.add('hidden');
+    }
+
+    function acceptRequest() {
+        document.getElementById('req-overlay').classList.add('hidden');
+        document.getElementById('incoming-request').classList.add('hidden');
+        
+        const fare = document.getElementById('req-fare').innerText;
+        setupActiveRideUI('driver', { name: 'যাত্রী', details: 'নথুল্লাবাদ টু সদর রোড', fare: fare });
+        navigate('screen-active-ride');
+    }
+
+    /** --- ACTIVE RIDE LOGIC --- **/
+    function setupActiveRideUI(role, data) {
+        document.getElementById('active-peer-name').innerText = data.name;
+        document.getElementById('active-peer-details').innerText = data.details;
+        document.getElementById('active-fare').innerText = '৳ ' + data.fare;
+        
+        const driverActionBtn = document.getElementById('btn-driver-action');
+        const statusBanner = document.getElementById('ride-status-text');
+        
+        if (role === 'driver') {
+            rideState = 0; // Reset state
+            driverActionBtn.classList.remove('hidden');
+            statusBanner.innerText = 'পিকআপের দিকে যান';
+            
+            // Reset button appearance
+            driverActionBtn.className = "hidden flex-2 bg-success text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-success/30 transition flex-grow";
+            driverActionBtn.classList.remove('hidden'); // unhide after reset
+            document.getElementById('driver-action-text').innerText = 'পৌঁছেছি';
+            driverActionBtn.querySelector('i').className = 'fa-solid fa-location-arrow';
+        } else {
+            driverActionBtn.classList.add('hidden');
+            statusBanner.innerText = 'চালক আপনার দিকে আসছেন (৩ মিনিট)';
+        }
+    }
+
+    function advanceRide() {
+        const btn = document.getElementById('btn-driver-action');
+        const icon = btn.querySelector('i');
+        const text = document.getElementById('driver-action-text');
+        const statusBanner = document.getElementById('ride-status-text');
+        
+        if (rideState === 0) { // Arrived -> Start
+            rideState = 1;
+            text.innerText = 'ট্রিপ শুরু করুন';
+            icon.className = 'fa-solid fa-play';
+            btn.classList.replace('bg-success', 'bg-warning');
+            btn.classList.replace('shadow-success/30', 'shadow-warning/30');
+            statusBanner.innerText = 'যাত্রী গাড়িতে উঠেছেন';
+        } else if (rideState === 1) { // Start -> Finish
+            rideState = 2;
+            text.innerText = 'ট্রিপ শেষ করুন';
+            icon.className = 'fa-solid fa-flag-checkered';
+            btn.classList.replace('bg-warning', 'bg-danger');
+            btn.classList.replace('shadow-warning/30', 'shadow-danger/30');
+            statusBanner.innerText = 'গন্তব্যের দিকে যাচ্ছেন';
+        } else if (rideState === 2) { // Finish -> End
+            addMockHistoryItem();
+            alert('ট্রিপ সফলভাবে শেষ হয়েছে! নগদ টাকা গ্রহণ করুন।');
+            navigateHome();
+            // Force status sync
+            if(document.getElementById('toggle-online').checked){
+               setTimeout(showIncomingRequest, 5000); 
             }
         }
     }
 
-    // Driver specific
-    function toggleDriverStatus() {
-        const isOnline = document.getElementById('toggle-online').checked;
-        const statusText = document.getElementById('driver-status-text');
-        
-        if(freeRides <= 0 && isOnline) {
-            document.getElementById('toggle-online').checked = false;
-            alert("No free rides left! Please recharge your subscription.");
-            navigate('payment-screen');
-            return;
-        }
-
-        if(isOnline) {
-            statusText.innerText = 'Online';
-            statusText.classList.replace('text-gray-700', 'text-success');
-            // Simulate incoming request after 2 seconds of going online
-            setTimeout(() => {
-                if(document.getElementById('toggle-online').checked) {
-                    document.getElementById('incoming-request').classList.remove('hidden');
-                }
-            }, 2000);
-        } else {
-            statusText.innerText = 'Offline';
-            statusText.classList.replace('text-success', 'text-gray-700');
-            document.getElementById('incoming-request').classList.add('hidden');
+    function cancelRide() {
+        if(confirm('আপনি কি নিশ্চিত রাইডটি বাতিল করতে চান?')) {
+            navigateHome();
         }
     }
-
-    // Leaflet Maps Initialization (Placeholder logic)
-    function initMaps() {
-        const barishalCoords = [22.7010, 90.3535]; // Barishal center
+    
+    function addMockHistoryItem() {
+        const list = document.getElementById('history-list');
+        const fare = document.getElementById('active-fare').innerText;
         
-        // Passenger Map
-        if (!maps['passenger']) {
-            maps['passenger'] = L.map('map-passenger', { zoomControl: false, attributionControl: false }).setView(barishalCoords, 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(maps['passenger']);
-            L.marker(barishalCoords).addTo(maps['passenger']);
+        // Remove empty state message if exists
+        if(list.querySelector('.fa-route')) {
+            list.innerHTML = '';
         }
         
-        // Driver Map
-        if (!maps['driver']) {
-            maps['driver'] = L.map('map-driver', { zoomControl: false, attributionControl: false }).setView(barishalCoords, 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(maps['driver']);
-            L.circleMarker(barishalCoords, { color: '#3F0F8F', radius: 8, fillOpacity: 1 }).addTo(maps['driver']);
-        }
-
-        // Active Ride Map
-        if (!maps['active']) {
-            maps['active'] = L.map('map-active', { zoomControl: false, attributionControl: false }).setView(barishalCoords, 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(maps['active']);
-            L.marker([22.7010, 90.3535]).addTo(maps['active']); // Pickup
-            L.marker([22.7050, 90.3600]).addTo(maps['active']); // Dropoff
-        }
+        const date = new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+        const time = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+        
+        const html = `
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-3">
+                    <span class="text-sm font-bold text-textMuted">${date} • ${time}</span>
+                    <span class="font-bold text-lg text-primary">${fare}</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-circle-dot text-primary text-xs w-4"></i>
+                        <span class="text-sm text-textDark">নথুল্লাবাদ বাস স্ট্যান্ড</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-location-dot text-danger text-xs w-4"></i>
+                        <span class="text-sm text-textDark">সদর রোড, বরিশাল</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        list.insertAdjacentHTML('afterbegin', html);
     }
 </script>
 </body>
