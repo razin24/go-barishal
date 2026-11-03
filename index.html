@@ -159,7 +159,7 @@
                 alert("আপনার রাইড রিকোয়েস্ট চালকদের কাছে পাঠানো হয়েছে!");
             }
         }
-        async function fetchRequests() {
+       async function fetchRequests() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
             
             if (data && data.length > 0) {
@@ -168,13 +168,31 @@
                     html += `
                     <div style="border:1px solid #ccc; margin:10px; padding:15px; border-radius:8px; text-align:left;">
                         <p><b>লোকেশন:</b> ${ride.pickup_location} ➡️ ${ride.dropoff_location}</p>
+                        <p><b>বাহন:</b> ${ride.vehicle_type}</p>
                         <p><b>ভাড়া:</b> ${ride.fare} টাকা</p>
-                        <button class="btn" style="background-color: green; margin-bottom: 0;">এক্সেপ্ট করুন</button>
+                        <button class="btn" style="background-color: green; margin-bottom: 0;" onclick="acceptRide('${ride.id}')">এক্সেপ্ট করুন</button>
                     </div>`;
                 });
                 document.getElementById('requests-list').innerHTML = html;
             } else {
                 document.getElementById('requests-list').innerHTML = "<p>এখনো কোনো রাইড রিকোয়েস্ট নেই...</p>";
+            }
+        }
+
+        async function acceptRide(rideId) {
+            const { error } = await supabaseClient
+                .from('rides')
+                .update({ 
+                    status: 'accepted', 
+                    driver_id: currentUser.id 
+                })
+                .eq('id', rideId);
+
+            if (error) {
+                alert("ডাটাবেস এরর: " + error.message);
+            } else {
+                alert("রাইডটি এক্সেপ্ট করা হয়েছে!");
+                fetchRequests(); // লিস্ট আপডেট করার জন্য
             }
         }
 
