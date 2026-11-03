@@ -285,7 +285,7 @@
                 <div id="driver-status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
                 <div>
                     <div id="driver-status-text" class="font-bold text-textDark text-sm">অফলাইন</div>
-                    <div class="text-xs text-textMuted">১৫টি ফ্রি রাইড বাকি</div>
+                    <div class="text-xs text-textMuted" id="driver-free-count">১৫টি ফ্রি রাইড বাকি</div>
                 </div>
             </div>
             
@@ -370,7 +370,7 @@
 
             <!-- Action Buttons Row 1 -->
             <div class="flex gap-3 mb-4">
-                <a href="tel:01700000000" class="flex-1 bg-primary/10 text-primary font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:bg-primary/20 transition">
+                <a id="active-call-link" href="#" class="flex-1 bg-primary/10 text-primary font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:bg-primary/20 transition">
                     <i class="fa-solid fa-phone"></i> কল করুন
                 </a>
                 
@@ -473,434 +473,43 @@
 </div>
 
 <script>
-    /** --- STATE MANAGEMENT --- **/
-    let currentUser = null;
-    let maps = {};
-    let selectedVehicle = 'bike';
-    let rideState = 0; // Driver ride states: 0=Accepted, 1=Arrived, 2=Started
-    let isDriverOnline = false;
-
-    // Initialize App
-    document.addEventListener("DOMContentLoaded", () => {
-        checkAuth();
-    });
-
-    /** --- AUTHENTICATION & PROFILE --- **/
-    function checkAuth() {
-        const storedUser = localStorage.getItem('gb_user');
-        if (storedUser) {
-            currentUser = JSON.parse(storedUser);
-            setupProfileData();
-            navigateHome();
-        } else {
-            navigate('screen-login');
-        }
-    }
-
-    function mockGoogleLogin() {
-        const btn = document.querySelector('#screen-login button');
-        const loader = document.getElementById('login-loading');
-        
-        btn.classList.add('hidden');
-        loader.classList.remove('hidden');
-        
-        // Simulate network delay
-        setTimeout(() => {
-            btn.classList.remove('hidden');
-            loader.classList.add('hidden');
-            
-            // Check if profile exists, else go to setup
-            if (currentUser) {
-                navigateHome();
-            } else {
-                // Clear form just in case
-                document.getElementById('setup-name').value = '';
-                document.getElementById('setup-phone').value = '';
-                navigate('screen-setup');
-            }
-        }, 1200);
-    }
-
-    function saveProfile(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById('setup-name').value.trim();
-        const phone = document.getElementById('setup-phone').value.trim();
-        const role = document.querySelector('input[name="role"]:checked').value;
-        
-        if (!name || !phone) {
-            alert('অনুগ্রহ করে নাম এবং মোবাইল নম্বর দিন।');
-            return;
-        }
-        
-        currentUser = {
-            id: 'USER_' + Math.random().toString(36).substr(2, 9),
-            name: name,
-            phone: phone,
-            role: role,
-            joinedAt: new Date().toISOString()
-        };
-        
-        localStorage.setItem('gb_user', JSON.stringify(currentUser));
-        setupProfileData();
-        navigateHome();
-    }
-    
-    function setupProfileData() {
-        if (!currentUser) return;
-        
-        // Populate Profile Screen
-        document.getElementById('profile-display-name').innerText = currentUser.name;
-        document.getElementById('profile-display-phone').innerText = currentUser.phone;
-        document.getElementById('profile-display-role').innerText = currentUser.role === 'passenger' ? 'যাত্রী' : 'চালক';
-        
-        // Populate Driver specific menu
-        if (currentUser.role === 'driver') {
-            document.getElementById('menu-subscription').style.display = 'flex';
-        } else {
-            document.getElementById('menu-subscription').style.display = 'none';
-        }
-    }
-
-    function editProfile() {
-        if (!currentUser) return;
-        document.getElementById('setup-name').value = currentUser.name;
-        document.getElementById('setup-phone').value = currentUser.phone;
-        document.querySelector(`input[name="role"][value="${currentUser.role}"]`).checked = true;
-        navigate('screen-setup');
-    }
-
-    function logout() {
-        if (confirm('আপনি কি লগ আউট করতে চান?')) {
-            localStorage.removeItem('gb_user');
-            currentUser = null;
-            
-            // Clear inputs
-            document.getElementById('setup-name').value = '';
-            document.getElementById('setup-phone').value = '';
-            
-            // Cleanup maps
-            Object.keys(maps).forEach(key => {
-                if (maps[key]) {
-                    maps[key].remove();
-                    maps[key] = null;
-                }
-            });
-            
-            navigate('screen-login');
-        }
-    }
-
-    /** --- NAVIGATION --- **/
-    function navigateHome() {
-        if (!currentUser) return navigate('screen-login');
-        const target = currentUser.role === 'passenger' ? 'screen-passenger' : 'screen-driver';
-        navigate(target);
-        updateNavUI('home');
-    }
-
-    function navigate(screenId) {
-        // Hide all screens
-        document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active');
-        });
-        
-        // Show target screen
-        const targetScreen = document.getElementById(screenId);
-        if(targetScreen) {
-            targetScreen.classList.add('active');
-            
-            // Manage Bottom Nav visibility
-            const navScreens = ['screen-passenger', 'screen-driver', 'screen-history', 'screen-profile'];
-            const bottomNav = document.getElementById('bottom-nav');
-            
-            if (navScreens.includes(screenId)) {
-                bottomNav.classList.remove('hidden');
-                setTimeout(() => bottomNav.classList.remove('translate-y-full'), 50);
-                
-                // Update active tab logic if needed
-                if(screenId !== 'screen-passenger' && screenId !== 'screen-driver') {
-                    updateNavUI(screenId);
-                }
-            } else {
-                bottomNav.classList.add('translate-y-full');
-                setTimeout(() => bottomNav.classList.add('hidden'), 300);
-            }
-            
-            // Initialize/Invalidate Maps
-            if (screenId === 'screen-passenger') {
-                initMap('map-passenger');
-            } else if (screenId === 'screen-driver') {
-                initMap('map-driver');
-            } else if (screenId === 'screen-active-ride') {
-                initMap('map-active');
-            }
-        }
-    }
-    
-    function updateNavUI(targetId) {
-        document.querySelectorAll('.nav-item').forEach(item => {
-            const icon = item.querySelector('i');
-            const text = item.querySelector('span');
-            
-            if (item.getAttribute('data-target') === targetId || 
-               (targetId === 'home' && item.getAttribute('data-target') === 'home')) {
-                // Active
-                icon.classList.remove('text-textMuted', 'fa-regular');
-                icon.classList.add('text-primary', 'fa-solid');
-                text.classList.remove('text-textMuted');
-                text.classList.add('text-primary');
-            } else {
-                // Inactive
-                icon.classList.remove('text-primary', 'fa-solid');
-                icon.classList.add('text-textMuted', 'fa-regular');
-                text.classList.remove('text-primary');
-                text.classList.add('text-textMuted');
-            }
-        });
-    }
-
-    /** --- MAP INITIALIZATION --- **/
-    const barishalCenter = [22.7010, 90.3535]; // Barishal coordinate
-
-    function initMap() {
-    if (!mapInitialized) {
-        // জিপিএস না পেলে বরিশালের ডিফল্ট লোকেশন দেখাবে
-        let lat = userLat ? userLat : 22.7010;
-        let lng = userLng ? userLng : 90.3535;
-
-        map = L.map('map').setView([lat, lng], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        if(userLat && userLng){
-            L.marker([userLat, userLng]).addTo(map).bindPopup('আপনার অবস্থান').openPopup();
-        }
-        
-        mapInitialized = true;
-        loadOnlineDrivers();
-    }
-    
-    // ম্যাপের ছাই রঙের বা সাইজ ভেঙে যাওয়ার সমস্যা ঠিক করতে
-    setTimeout(() => { if (map) map.invalidateSize(); }, 300);
-}
-    
-    function addMarker(map, latlng, color, iconClass) {
-        const customIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.3);"><i class="fa-solid ${iconClass} text-sm"></i></div>`,
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
-        L.marker(latlng, {icon: customIcon}).addTo(map);
-    }
-
-    /** --- PASSENGER LOGIC --- **/
-    function selectVehicle(type) {
-        selectedVehicle = type;
-        const bike = document.getElementById('veh-bike');
-        const cng = document.getElementById('veh-cng');
-        const cngIcon = document.getElementById('veh-cng-icon');
-        const cngText = document.getElementById('veh-cng-text');
-        
-        if (type === 'bike') {
-            bike.className = 'flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
-            bike.querySelector('i').classList.replace('text-textMuted', 'text-primary');
-            
-            cng.className = 'flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
-            cngIcon.classList.replace('text-primary', 'text-textMuted');
-            cngText.classList.replace('text-primary', 'text-textMuted');
-        } else {
-            cng.className = 'flex-1 border-2 border-primary bg-primary/5 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
-            cngIcon.classList.replace('text-textMuted', 'text-primary');
-            cngText.classList.replace('text-textMuted', 'text-primary');
-            
-            bike.className = 'flex-1 border-2 border-gray-100 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition';
-            bike.querySelector('i').classList.replace('text-primary', 'text-textMuted');
-        }
-    }
-
-    function requestRide() {
-        const dropoff = document.getElementById('pass-dropoff').value.trim();
-        const fare = document.getElementById('pass-fare').value.trim();
-        const btn = document.getElementById('btn-find-ride');
-        
-        if (!dropoff) {
-            alert('অনুগ্রহ করে গন্তব্য লিখুন');
-            return;
-        }
-        if (!fare || parseInt(fare) < 20) {
-            alert('সঠিক ভাড়া প্রস্তাব করুন (নূন্যতম ২০ টাকা)');
-            return;
-        }
-        
-        // Simulating Ride Finding state
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> চালক খোঁজা হচ্ছে...';
-        btn.disabled = true;
-        btn.classList.add('opacity-80');
-        
-        setTimeout(() => {
-            // Mock driver found
-            setupActiveRideUI('passenger', { name: 'রহিম মিয়া', details: 'হোন্ডা সিবি হর্নেট • ভোলা ১১-২২৩৩', fare: fare });
-            navigate('screen-active-ride');
-            
-            // Reset button
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            btn.classList.remove('opacity-80');
-            document.getElementById('pass-dropoff').value = '';
-            document.getElementById('pass-fare').value = '';
-        }, 2000);
-    }
-
-    /** --- DRIVER LOGIC --- **/
-    function toggleOnlineStatus() {
-        isDriverOnline = document.getElementById('toggle-online').checked;
-        const statusText = document.getElementById('driver-status-text');
-        const indicator = document.getElementById('driver-status-indicator');
-        const sheet = document.getElementById('driver-searching-sheet');
-        
-        if(isDriverOnline) {
-            statusText.innerText = 'অনলাইন';
-            statusText.classList.replace('text-textDark', 'text-success');
-            indicator.classList.replace('bg-gray-400', 'bg-success');
-            sheet.classList.remove('!translate-y-[120%]');
-            
-            // Mock incoming request after 3 seconds
-            setTimeout(() => {
-                if (isDriverOnline && !document.getElementById('screen-active-ride').classList.contains('active')) {
-                    showIncomingRequest();
-                }
-            }, 3000);
-        } else {
-            statusText.innerText = 'অফলাইন';
-            statusText.classList.replace('text-success', 'text-textDark');
-            indicator.classList.replace('bg-success', 'bg-gray-400');
-            sheet.classList.add('!translate-y-[120%]');
-            document.getElementById('incoming-request').classList.add('hidden');
-            document.getElementById('req-overlay').classList.add('hidden');
-        }
-    }
-
-    function showIncomingRequest() {
-        document.getElementById('req-overlay').classList.remove('hidden');
-        document.getElementById('incoming-request').classList.remove('hidden');
-        // Randomize fare slightly for realism
-        const randomFare = Math.floor(Math.random() * 40) + 40;
-        document.getElementById('req-fare').innerText = randomFare;
-    }
-
-    function rejectRequest() {
-        document.getElementById('req-overlay').classList.add('hidden');
-        document.getElementById('incoming-request').classList.add('hidden');
-    }
-
-    function acceptRequest() {
-        document.getElementById('req-overlay').classList.add('hidden');
-        document.getElementById('incoming-request').classList.add('hidden');
-        
-        const fare = document.getElementById('req-fare').innerText;
-        setupActiveRideUI('driver', { name: 'যাত্রী', details: 'নথুল্লাবাদ টু সদর রোড', fare: fare });
-        navigate('screen-active-ride');
-    }
-
-    /** --- ACTIVE RIDE LOGIC --- **/
-    function setupActiveRideUI(role, data) {
-        document.getElementById('active-peer-name').innerText = data.name;
-        document.getElementById('active-peer-details').innerText = data.details;
-        document.getElementById('active-fare').innerText = '৳ ' + data.fare;
-        
-        const driverActionBtn = document.getElementById('btn-driver-action');
-        const statusBanner = document.getElementById('ride-status-text');
-        
-        if (role === 'driver') {
-            rideState = 0; // Reset state
-            driverActionBtn.classList.remove('hidden');
-            statusBanner.innerText = 'পিকআপের দিকে যান';
-            
-            // Reset button appearance
-            driverActionBtn.className = "hidden flex-2 bg-success text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-95 shadow-md shadow-success/30 transition flex-grow";
-            driverActionBtn.classList.remove('hidden'); // unhide after reset
-            document.getElementById('driver-action-text').innerText = 'পৌঁছেছি';
-            driverActionBtn.querySelector('i').className = 'fa-solid fa-location-arrow';
-        } else {
-            driverActionBtn.classList.add('hidden');
-            statusBanner.innerText = 'চালক আপনার দিকে আসছেন (৩ মিনিট)';
-        }
-    }
-
-    function advanceRide() {
-        const btn = document.getElementById('btn-driver-action');
-        const icon = btn.querySelector('i');
-        const text = document.getElementById('driver-action-text');
-        const statusBanner = document.getElementById('ride-status-text');
-        
-        if (rideState === 0) { // Arrived -> Start
-            rideState = 1;
-            text.innerText = 'ট্রিপ শুরু করুন';
-            icon.className = 'fa-solid fa-play';
-            btn.classList.replace('bg-success', 'bg-warning');
-            btn.classList.replace('shadow-success/30', 'shadow-warning/30');
-            statusBanner.innerText = 'যাত্রী গাড়িতে উঠেছেন';
-        } else if (rideState === 1) { // Start -> Finish
-            rideState = 2;
-            text.innerText = 'ট্রিপ শেষ করুন';
-            icon.className = 'fa-solid fa-flag-checkered';
-            btn.classList.replace('bg-warning', 'bg-danger');
-            btn.classList.replace('shadow-warning/30', 'shadow-danger/30');
-            statusBanner.innerText = 'গন্তব্যের দিকে যাচ্ছেন';
-        } else if (rideState === 2) { // Finish -> End
-            addMockHistoryItem();
-            alert('ট্রিপ সফলভাবে শেষ হয়েছে! নগদ টাকা গ্রহণ করুন।');
-            navigateHome();
-            // Force status sync
-            if(document.getElementById('toggle-online').checked){
-               setTimeout(showIncomingRequest, 5000); 
-            }
-        }
-    }
-
-    function cancelRide() {
-        if(confirm('আপনি কি নিশ্চিত রাইডটি বাতিল করতে চান?')) {
-            navigateHome();
-        }
-    }
-    
-    function addMockHistoryItem() {
-        const list = document.getElementById('history-list');
-        const fare = document.getElementById('active-fare').innerText;
-        
-        // Remove empty state message if exists
-        if(list.querySelector('.fa-route')) {
-            list.innerHTML = '';
-        }
-        
-        const date = new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
-        const time = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
-        
-        const html = `
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-3">
-                    <span class="text-sm font-bold text-textMuted">${date} • ${time}</span>
-                    <span class="font-bold text-lg text-primary">${fare}</span>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-circle-dot text-primary text-xs w-4"></i>
-                        <span class="text-sm text-textDark">নথুল্লাবাদ বাস স্ট্যান্ড</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-location-dot text-danger text-xs w-4"></i>
-                        <span class="text-sm text-textDark">সদর রোড, বরিশাল</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        list.insertAdjacentHTML('afterbegin', html);
-    }
+'use strict';
+const STORE={user:'gb_user',ride:'gb_active_ride',rides:'gb_ride_history',free:'gb_driver_free_rides'};
+let currentUser=null, maps={}, selectedVehicle='bike', isDriverOnline=false, rideState=0, currentRide=null, userLat=null,userLng=null;
+const BARISHAL=[22.7010,90.3535];
+const $=id=>document.getElementById(id);
+function read(key,fallback=null){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
+function write(key,value){localStorage.setItem(key,JSON.stringify(value))}
+document.addEventListener('DOMContentLoaded',()=>{checkAuth();window.addEventListener('storage',onStorageChange);if('BroadcastChannel'in window){window.rideChannel=new BroadcastChannel('go-barishal-rides');window.rideChannel.onmessage=e=>handleRideUpdate(e.data)}});
+function broadcast(type,ride){const msg={type,ride};try{window.rideChannel?.postMessage(msg)}catch{}}
+function checkAuth(){currentUser=read(STORE.user);if(currentUser?.name&&currentUser?.phone&&currentUser?.role){setupProfileData();navigateHome()}else navigate('screen-login')}
+function mockGoogleLogin(){const btn=$('screen-login').querySelector('button');$('login-loading').classList.remove('hidden');btn.disabled=true;setTimeout(()=>{btn.disabled=false;$('login-loading').classList.add('hidden');currentUser=read(STORE.user);if(currentUser?.name&&currentUser?.phone&&currentUser?.role){setupProfileData();navigateHome()}else{$('setup-name').value='';$('setup-phone').value='';$('profile-form').dataset.edit='false';navigate('screen-setup')}},250)}
+function saveProfile(e){e.preventDefault();const name=$('setup-name').value.trim(),phone=$('setup-phone').value.trim(),role=document.querySelector('input[name="role"]:checked')?.value;if(!name||!/^01[3-9]\d{8}$/.test(phone)){alert('সঠিক নাম ও ১১ সংখ্যার বাংলাদেশি মোবাইল নম্বর দিন।');return}const old=read(STORE.user,{});currentUser={...old,id:old.id||'USER_'+crypto.randomUUID(),name,phone,role,joinedAt:old.joinedAt||new Date().toISOString()};write(STORE.user,currentUser);setupProfileData();$('profile-form').dataset.edit='false';navigateHome()}
+function setupProfileData(){if(!currentUser)return;$('profile-display-name').textContent=currentUser.name;$('profile-display-phone').textContent=currentUser.phone;$('profile-display-role').textContent=currentUser.role==='passenger'?'যাত্রী':'চালক';$('menu-subscription').style.display=currentUser.role==='driver'?'flex':'none';updateFreeRideLabel()}
+function editProfile(){if(!currentUser)return;$('setup-name').value=currentUser.name;$('setup-phone').value=currentUser.phone;const r=document.querySelector(`input[name="role"][value="${currentUser.role}"]`);if(r)r.checked=true;$('profile-form').dataset.edit='true';navigate('screen-setup')}
+function logout(){if(confirm('আপনি কি লগ আউট করতে চান?')){localStorage.removeItem(STORE.user);currentUser=null;navigate('screen-login')}}
+function navigateHome(){if(!currentUser)return navigate('screen-login');navigate(currentUser.role==='passenger'?'screen-passenger':'screen-driver');updateNavUI('home')}
+function navigate(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const target=$(id);if(!target)return;target.classList.add('active');target.scrollTop=0;const nav=['screen-passenger','screen-driver','screen-history','screen-profile'];if(nav.includes(id)){$('bottom-nav').classList.remove('hidden','translate-y-full');if(id==='screen-history'||id==='screen-profile')updateNavUI(id)}else{$('bottom-nav').classList.add('translate-y-full');setTimeout(()=>$('bottom-nav').classList.add('hidden'),300)}if(id==='screen-passenger')initMap('map-passenger');if(id==='screen-driver')initMap('map-driver');if(id==='screen-active-ride')initMap('map-active');if(id==='screen-history')renderHistory()}
+function updateNavUI(id){document.querySelectorAll('.nav-item').forEach(item=>{const active=item.dataset.target===id||(id==='home'&&item.dataset.target==='home');item.classList.toggle('text-primary',active);item.classList.toggle('text-textMuted',!active);item.querySelector('i').classList.toggle('text-primary',active);item.querySelector('i').classList.toggle('text-textMuted',!active);item.querySelector('span').classList.toggle('text-primary',active);item.querySelector('span').classList.toggle('text-textMuted',!active)})}
+function initMap(elementId){const el=$(elementId);if(!el||!window.L)return;if(maps[elementId]){setTimeout(()=>maps[elementId].invalidateSize(),250);return}const map=L.map(elementId).setView([userLat??BARISHAL[0],userLng??BARISHAL[1]],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);maps[elementId]=map;if(userLat!==null)addMarker(elementId,[userLat,userLng],'#3F0F8F','fa-location-crosshairs');setTimeout(()=>map.invalidateSize(),300);if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{userLat=pos.coords.latitude;userLng=pos.coords.longitude;if(maps[elementId]){maps[elementId].setView([userLat,userLng],15);addMarker(elementId,[userLat,userLng],'#3F0F8F','fa-location-crosshairs')}},()=>{}, {enableHighAccuracy:true,timeout:8000})}
+function addMarker(mapId,latlng,color,iconClass){const map=maps[mapId];if(!map)return;const icon=L.divIcon({className:'custom-div-icon',html:`<div style="background:${color};width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;border:3px solid white"><i class="fa-solid ${iconClass}"></i></div>`,iconSize:[30,30],iconAnchor:[15,15]});L.marker(latlng,{icon}).addTo(map)}
+function selectVehicle(type){selectedVehicle=type;const bike=$('veh-bike'),cng=$('veh-cng');bike.className='flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer '+(type==='bike'?'border-primary bg-primary/5':'border-gray-100 bg-white');cng.className='flex-1 border-2 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer '+(type==='cng'?'border-primary bg-primary/5':'border-gray-100 bg-white');$('veh-bike').querySelector('i').className='fa-solid fa-motorcycle text-3xl mb-1 '+(type==='bike'?'text-primary':'text-textMuted');$('veh-cng-icon').className='fa-solid fa-car text-3xl mb-1 '+(type==='cng'?'text-primary':'text-textMuted');$('veh-cng-text').className='text-sm font-semibold '+(type==='cng'?'text-primary':'text-textMuted')}
+function requestRide(){const pickup=$('pass-pickup').value.trim(),dropoff=$('pass-dropoff').value.trim(),fare=Number($('pass-fare').value);if(!dropoff)return alert('গন্তব্য লিখুন');if(!Number.isFinite(fare)||fare<20)return alert('সঠিক ভাড়া দিন (সর্বনিম্ন ২০ টাকা)');if(read(STORE.ride)?.status&&!['completed','cancelled','rejected'].includes(read(STORE.ride).status))return alert('আপনার একটি রাইড ইতিমধ্যে চলমান আছে।');const ride={id:'RIDE_'+crypto.randomUUID(),passengerId:currentUser?.id,passengerName:currentUser?.name||'যাত্রী',passengerPhone:currentUser?.phone||'',pickup,dropoff,vehicle:selectedVehicle,fare,status:'pending',createdAt:new Date().toISOString(),driverId:null,driverName:null,driverPhone:null,step:0};write(STORE.ride,ride);currentRide=ride;broadcast('ride-updated',ride);$('btn-find-ride').disabled=true;$('btn-find-ride').innerHTML='চালকের অপেক্ষায়...';alert('রাইড রিকোয়েস্ট পাঠানো হয়েছে। চালক গ্রহণ করলে এখানে আপডেট দেখাবে।')}
+function showIncomingRequest(){const ride=read(STORE.ride);if(!ride||ride.status!=='pending'||currentUser?.role!=='driver'||!isDriverOnline)return;currentRide=ride;$('req-fare').textContent=ride.fare;$('req-pickup').textContent=ride.pickup;$('req-dropoff').textContent=ride.dropoff;$('req-overlay').classList.remove('hidden');$('incoming-request').classList.remove('hidden')}
+function toggleOnlineStatus(){isDriverOnline=$('toggle-online').checked;$('driver-status-text').textContent=isDriverOnline?'অনলাইন':'অফলাইন';$('driver-status-text').className='font-bold text-sm '+(isDriverOnline?'text-success':'text-textDark');$('driver-status-indicator').className='w-3 h-3 rounded-full '+(isDriverOnline?'bg-success':'bg-gray-400');$('driver-searching-sheet').classList.toggle('!translate-y-[120%]',!isDriverOnline);if(isDriverOnline)showIncomingRequest();else{$('incoming-request').classList.add('hidden');$('req-overlay').classList.add('hidden')}}
+function rejectRequest(){const ride=read(STORE.ride);if(ride?.status==='pending'){ride.status='rejected';write(STORE.ride,ride);broadcast('ride-updated',ride)}$('req-overlay').classList.add('hidden');$('incoming-request').classList.add('hidden')}
+function acceptRequest(){const ride=read(STORE.ride);if(!ride||ride.status!=='pending')return alert('এই রাইডটি আর পাওয়া যাচ্ছে না।');ride.status='accepted';ride.driverId=currentUser?.id;ride.driverName=currentUser?.name||'চালক';ride.driverPhone=currentUser?.phone||'';ride.acceptedAt=new Date().toISOString();ride.step=0;write(STORE.ride,ride);currentRide=ride;broadcast('ride-updated',ride);$('req-overlay').classList.add('hidden');$('incoming-request').classList.add('hidden');renderActiveRide()}
+function handleRideUpdate(msg){if(!msg?.ride)return;currentRide=msg.ride;syncRideUI(msg.ride)}
+function onStorageChange(e){if(e.key===STORE.ride){const ride=read(STORE.ride);if(ride){currentRide=ride;syncRideUI(ride)}else resetPassengerRequest()}if(e.key===STORE.free)updateFreeRideLabel()}
+function syncRideUI(ride){if(currentUser?.role==='passenger'&&ride.passengerId===currentUser.id){if(ride.status==='accepted'||ride.status==='arrived'||ride.status==='started')renderActiveRide();else if(ride.status==='completed'){alert('আপনার রাইড সম্পন্ন হয়েছে।');navigateHome();resetPassengerRequest()}else if(ride.status==='cancelled'||ride.status==='rejected'){alert('রাইডটি বাতিল/প্রত্যাখ্যান করা হয়েছে।');navigateHome();resetPassengerRequest()}}if(currentUser?.role==='driver'&&ride.status==='pending'&&isDriverOnline)showIncomingRequest();if(currentUser?.role==='driver'&&ride.driverId===currentUser.id&&['accepted','arrived','started'].includes(ride.status))renderActiveRide()}
+function renderActiveRide(){const ride=read(STORE.ride);if(!ride)return;currentRide=ride;const isDriver=currentUser?.role==='driver';$('active-peer-name').textContent=isDriver?ride.passengerName:ride.driverName||'চালক রিকোয়েস্ট গ্রহণ করেছেন';$('active-peer-details').textContent=`${ride.pickup} → ${ride.dropoff}`;$('active-fare').textContent='৳ '+ride.fare;$('ride-status-text').textContent=ride.status==='accepted'?'চালক রাইড গ্রহণ করেছেন':ride.status==='arrived'?'চালক পিকআপে পৌঁছেছেন':ride.status==='started'?'ট্রিপ চলছে':'রাইডের অবস্থা';$('btn-driver-action').classList.toggle('hidden',!isDriver);if(isDriver){rideState=ride.step||0;const labels=['পৌঁছেছি','ট্রিপ শুরু করুন','ট্রিপ শেষ করুন'];$('driver-action-text').textContent=labels[rideState]||labels[0]}const phone=isDriver?ride.passengerPhone:ride.driverPhone;$('active-call-link')?.setAttribute('href',phone?'tel:'+phone:'#');navigate('screen-active-ride')}
+function advanceRide(){const ride=read(STORE.ride);if(!ride||ride.driverId!==currentUser?.id)return;ride.step=(ride.step||0)+1;if(ride.step===1)ride.status='arrived';else if(ride.step===2)ride.status='started';else{completeRide(ride);return}write(STORE.ride,ride);broadcast('ride-updated',ride);renderActiveRide()}
+function completeRide(ride){ride.status='completed';ride.completedAt=new Date().toISOString();write(STORE.ride,ride);const history=read(STORE.rides,[]);history.unshift(ride);write(STORE.rides,history);if(currentUser?.role==='driver'){let remaining=Number(localStorage.getItem(STORE.free));if(!Number.isFinite(remaining))remaining=15;remaining=Math.max(0,remaining-1);localStorage.setItem(STORE.free,String(remaining));updateFreeRideLabel()}broadcast('ride-updated',ride);alert('ট্রিপ সফলভাবে শেষ হয়েছে।');navigateHome();renderHistory()}
+function cancelRide(){if(!confirm('রাইডটি বাতিল করতে চান?'))return;const ride=read(STORE.ride);if(ride&&['pending','accepted','arrived','started'].includes(ride.status)){ride.status='cancelled';write(STORE.ride,ride);broadcast('ride-updated',ride)}navigateHome();resetPassengerRequest()}
+function resetPassengerRequest(){$('btn-find-ride').disabled=false;$('btn-find-ride').innerHTML='<span>রাইড খুঁজুন</span>'}
+function updateFreeRideLabel(){let n=localStorage.getItem(STORE.free);if(n===null){n='15';localStorage.setItem(STORE.free,n)}$('driver-free-count').textContent=`${n}টি ফ্রি রাইড বাকি`;const sub=$('menu-subscription').querySelector('.text-xs');if(sub)sub.textContent=`${n}টি ফ্রি রাইড বাকি`}
+function renderHistory(){const list=$('history-list');const rides=read(STORE.rides,[]).filter(r=>currentUser?.role==='driver'?r.driverId===currentUser.id:r.passengerId===currentUser?.id);if(!rides.length){list.innerHTML='<div class="text-center text-textMuted py-10"><i class="fa-solid fa-route text-4xl mb-3 opacity-50"></i><p>কোনো পূর্ববর্তী ট্রিপ নেই</p></div>';return}list.innerHTML=rides.map(r=>`<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><div class="flex justify-between border-b pb-3 mb-3"><span>${new Date(r.createdAt).toLocaleString('bn-BD')}</span><b>৳ ${Number(r.fare).toLocaleString('bn-BD')}</b></div><p>পিকআপ: ${escapeHTML(r.pickup)}</p><p>গন্তব্য: ${escapeHTML(r.dropoff)}</p><small>অবস্থা: ${r.status==='completed'?'সম্পন্ন':r.status}</small></div>`).join('')}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 </script>
 </body>
 </html>
