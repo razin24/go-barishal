@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Barishal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #F4F0FB; color: #1B1330; text-align: center; padding: 20px; }
+        .btn { background-color: #3F0F8F; color: white; padding: 15px 20px; border: none; border-radius: 12px; font-size: 18px; width: 100%; margin-bottom: 15px; }
+        .card { background-color: #FFFFFF; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        input, select { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <h2>Go Barishal</h2>
+
+    <div id="login-section" class="card">
+        <p>অ্যাপ ব্যবহার করতে Google দিয়ে লগইন করুন</p>
+        <button class="btn" onclick="loginWithGoogle()">Google লগইন</button>
+    </div>
+
+    <div id="profile-section" class="card" style="display: none;">
+        <h3>আপনার তথ্য দিন</h3>
+        <input type="text" id="full_name" placeholder="আপনার নাম">
+        <input type="text" id="phone" placeholder="ফোন নম্বর">
+        <select id="role">
+            <option value="passenger">আমি যাত্রী</option>
+            <option value="driver">আমি চালক</option>
+        </select>
+        <p><input type="checkbox" id="terms"> আমি শর্তাবলী মেনে নিলাম</p>
+        <button class="btn" onclick="saveProfile()">সেভ করুন</button>
+    </div>
+
+    <script>
+        // এখানে আপনার Supabase URL ও Anon Key বসান
+        const supabaseUrl = 'APNAR_SUPABASE_URL';
+        const supabaseKey = 'APNAR_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function loginWithGoogle() {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+            });
+            if (error) alert("লগইনে সমস্যা হয়েছে!");
+        }
+
+        async function checkUser() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('profile-section').style.display = 'block';
+            }
+        }
+
+        async function saveProfile() {
+            const { data: { user } } = await supabase.auth.getUser();
+            const fullName = document.getElementById('full_name').value;
+            const phone = document.getElementById('phone').value;
+            const role = document.getElementById('role').value;
+            const terms = document.getElementById('terms').checked;
+
+            if (!terms) {
+                alert("শর্তাবলীতে টিক দিন!");
+                return;
+            }
+
+            const { error } = await supabase.from('profiles').insert([{
+                id: user.id,
+                full_name: fullName,
+                email: user.email,
+                phone: phone,
+                role: role,
+                accepted_terms_at: new Date().toISOString()
+            }]);
+
+            if (error) alert("প্রোফাইল সেভ করা যায়নি। অন্য ফোন নম্বর দিন।");
+            else alert("প্রোফাইল তৈরি হয়েছে!");
+        }
+
+        checkUser();
+    </script>
+</body>
+</html>
